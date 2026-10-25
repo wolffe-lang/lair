@@ -1,0 +1,167 @@
+# lair — CI. The tiers are ci/tiers.py's (clef's planner, the house rule);
+# a job marked `# tier: pr` runs for a pull request, the rest for trunk,
+# the nightly, a dispatch and the `full-matrix` label:
+#   tier pr    the planner's test and the memory gate's; the Linux leg
+#              (fmt, the engine's unit tests on the checked machine, both
+#              builds, `lair --selftest`); and pack ON THIS ENGINE in the
+#              container: pack cloned at the first ref of ci/games.conf that
+#              exists, this checkout staged as its `.lair` (LAIR_UNPINNED=1,
+#              said loudly), then pack's whole Linux leg — fmt, 129 tests,
+#              both builds, the selftest, the 39 goldens byte for byte, the
+#              eight pty rows. The proof that the engine still plays pack.
+#   tier full  the above plus the macOS leg (the engine's build, tests and
+#              selftest on a macOS runner).
+# Every step runs bare and its exit code is read directly: no pipes. A red
+# nightly opens one issue (ci/nightly-red.sh).
+name: ci
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [trunk]
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: 'Job ids, space separated; empty runs every job'
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}-{1}', github.head_ref, (github.event.action == 'labeled' && github.event.label.name != 'full-matrix') && format('noop-{0}', github.run_id) || (contains(github.event.pull_request.labels.*.name, 'full-matrix') && 'full' || 'pr')) || format('ci-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      tier: ${{ steps.plan.outputs.tier }}
+      jobs: ${{ steps.plan.outputs.jobs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          IN_JOBS: ${{ inputs.jobs }}
+        run: python3 ci/tiers.py plan --merge --github-output "$GITHUB_OUTPUT"
+  plan-test:
+    # tier: pr
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'plan-test')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I ci/tiers-test.py
+      - run: python3 -I ci/memgate-test.py
+  linux:
+    # tier: pr
+    name: linux x86-64 (fmt, the engine's tests, builds, selftest in the container)
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'linux')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .wolf-bin
+          key: lair-toolchain-linux-${{ hashFiles('wolf-toolchain.toml') }}
+      - name: the pinned toolchain, by digest
+        run: tools/fetch-toolchain
+      - name: the Linux leg, in the container
+        env:
+          LAIR_ENGINE: docker
+        run: tools/in-container tools/check-linux
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: linux-evidence
+          path: target/test.log
+  pack:
+    # tier: pr
+    name: pack on this engine (goldens, pty rows in the container)
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: pack, at the first ref of ci/games.conf that exists
+        run: ci/stage-game pack game
+      - uses: actions/cache@v4
+        with:
+          path: game/.wolf-bin
+          key: lair-toolchain-linux-${{ hashFiles('wolf-toolchain.toml') }}
+      - name: the pinned toolchain, by digest
+        run: game/.lair/tools/fetch-toolchain
+      - name: pack's Linux leg on the engine under test
+        env:
+          LAIR_ENGINE: docker
+          LAIR_UNPINNED: '1'
+        run: game/.lair/tools/in-container .lair/tools/check-linux
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: pack-evidence
+          path: |
+            game/target/goldens
+            game/target/pty
+            game/target/test.log
+  macos:
+    name: macOS arm64 (the engine's build, tests, selftest)
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'macos')
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .wolf-bin
+          key: lair-toolchain-macos-${{ hashFiles('wolf-toolchain.toml') }}
+      - name: the pinned toolchain, by digest
+        run: tools/fetch-toolchain
+      # RULES section 4's memory gate is nomad's (the maintainer's Mac); the
+      # runner's free-memory figure means nothing for it (tools/lib-mem.sh).
+      - name: fmt, the tests, both builds, the selftest
+        env:
+          LAIR_MEMORY_GATE: '0'
+        run: tools/check
+  tier:
+    name: tier ${{ needs.plan.outputs.tier || 'unplanned' }}
+    if: ${{ !cancelled() }}
+    needs:
+      - plan
+      - plan-test
+      - linux
+      - pack
+      - macos
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: python3 ci/tiers.py verdict
+  nightly-red:
+    name: nightly red, an issue
+    needs: tier
+    if: ${{ failure() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: ci/nightly-red.sh

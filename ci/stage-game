@@ -1,0 +1,38 @@
+#!/bin/sh
+# stage-game — clone a game of ci/games.conf and stage THIS lair checkout
+# as its `.lair`, for lair's own CI (the game on the engine under test).
+#
+#   ci/stage-game <job> <dir>
+set -eu
+LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+job=$1
+dir=$2
+line=$(grep -v '^#' "$LAIR_ROOT/ci/games.conf" | awk -v j="$job" '$1 == j')
+[ -n "$line" ] || { echo "stage-game: no job $job in ci/games.conf" >&2; exit 2; }
+repo=$(echo "$line" | awk '{print $2}')
+refs=$(echo "$line" | awk '{for (i = 3; i <= NF; i++) print $i}')
+rm -rf "$dir"
+for ref in $refs; do
+    if git clone -q --depth 1 --branch "$ref" "https://github.com/$repo" "$dir" 2>/dev/null; then
+        echo "stage-game: $repo at $ref ($(git -C "$dir" rev-parse --short HEAD))"
+        break
+    fi
+    # A commit, not a branch or tag: fetch it by sha.
+    if echo "$ref" | grep -q '^[0-9a-f]\{40\}$'; then
+        git init -q "$dir"
+        if git -C "$dir" fetch -q --depth 1 "https://github.com/$repo" "$ref" 2>/dev/null; then
+            git -C "$dir" checkout -q FETCH_HEAD
+            echo "stage-game: $repo at $ref"
+            break
+        fi
+        rm -rf "$dir"
+    fi
+    echo "stage-game: $repo has no ref $ref; the next"
+done
+[ -d "$dir/.git" ] || { echo "stage-game: none of the refs ($refs) exists on $repo" >&2; exit 1; }
+[ -f "$dir/lair.pin" ] || { echo "stage-game: $repo at this ref carries no lair.pin: not a lair game yet" >&2; exit 1; }
+rm -rf "$dir/.lair"
+mkdir -p "$dir/.lair"
+git -C "$LAIR_ROOT" archive HEAD | tar -x -C "$dir/.lair"
+git -C "$LAIR_ROOT" rev-parse HEAD >"$dir/.lair/LAIR-REV"
+echo "stage-game: this lair ($(cat "$dir/.lair/LAIR-REV" | cut -c1-9)) staged as $dir/.lair; the game pins $(cut -c1-9 "$dir/lair.pin" | head -1)"
