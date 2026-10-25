@@ -1,0 +1,114 @@
+//! draw — the primitives every game draws its cards and sprites with:
+//! text in a style, a filled rectangle, a framed box, a sprite as data
+//! blitted onto the grid, and the text fitting the cards need. Pure: a
+//! grid in, a grid out. What a sprite MEANS (a wolf's ear, a cub's tail)
+//! and which cell a tier gives it is the game's sprite table (R-cb00-2 A:
+//! each game owns its sheets, the engine owns the draw calls).
+
+use grid
+
+/// `text`'s bytes at `row`, `col` and rightwards, each in `style`'s
+/// colours and attributes (the style's own code point is ignored). Writes
+/// past the grid's edge are dropped, as `grid.put` drops them.
+pub fn put_text(mut g: grid.Grid, row: int, col: int, text: str, style: grid.Cell) {
+    var c = col
+    for b in text.bytes() {
+        grid.put(mut g, row, c, grid.cell(b as int, style.fg, style.bg, style.attrs))
+        c += 1
+    }
+}
+
+/// Every cell of the `rows` by `cols` rectangle at `top`, `left` set to `c`.
+pub fn fill(mut g: grid.Grid, top: int, left: int, rows: int, cols: int, c: grid.Cell) {
+    var r = 0
+    while r < rows {
+        var k = 0
+        while k < cols {
+            grid.put(mut g, top + r, left + k, c)
+            k += 1
+        }
+        r += 1
+    }
+}
+
+/// A framed box: the top row `top_edge`, the bottom row `bottom_edge`,
+/// the first and last column of the rows between `side`, and `inner`
+/// everywhere else (the cards' shape on both tiers).
+pub fn frame(
+    mut g: grid.Grid,
+    top: int,
+    left: int,
+    rows: int,
+    cols: int,
+    top_edge: grid.Cell,
+    bottom_edge: grid.Cell,
+    side: grid.Cell,
+    inner: grid.Cell,
+) {
+    var r = 0
+    while r < rows {
+        var c = 0
+        while c < cols {
+            let cell = if r == 0 {
+                copy top_edge
+            } else if r == rows - 1 {
+                copy bottom_edge
+            } else if c == 0 || c == cols - 1 {
+                copy side
+            } else {
+                copy inner
+            }
+            grid.put(mut g, top + r, left + c, cell)
+            c += 1
+        }
+        r += 1
+    }
+}
+
+/// A sprite as data: `lines` are rows of code points (one cell a code
+/// point), drawn at `row`, `col` in `style`'s colours and attributes; a
+/// space is transparent (the cell under it stays). A game's `docs/ART.md`
+/// can show a sprite exactly as the list spells it.
+pub fn blit(mut g: grid.Grid, row: int, col: int, lines: List[str], style: grid.Cell) {
+    var r = 0
+    while r < lines.len {
+        var c = 0
+        for ch in lines[r].chars() {
+            let cp = ch as int
+            if cp != 32 {
+                grid.put(mut g, row + r, col + c, grid.cell(cp, style.fg, style.bg, style.attrs))
+            }
+            c += 1
+        }
+        r += 1
+    }
+}
+
+/// `text` padded with spaces on the left to `width` bytes.
+pub fn pad_left(text: str, width: int) -> str {
+    var out = text
+    while out.len < width {
+        out = " " + out
+    }
+    out
+}
+
+/// `text` cut to `width` bytes, the tail kept when `keep_tail` (a path:
+/// the name is what the eye wants), else the head.
+pub fn fit(text: str, width: int, keep_tail: bool) -> str {
+    if text.len <= width {
+        return text
+    }
+    if keep_tail {
+        return text[text.len - width..]
+    }
+    text[0..width]
+}
+
+/// The last segment of a path.
+pub fn short_name(p: str) -> str {
+    let slash = p.rfind("/") else {
+        return p
+    }
+    p[slash + 1..]
+}

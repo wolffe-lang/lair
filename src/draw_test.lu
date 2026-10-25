@@ -1,0 +1,72 @@
+//! member: false
+//!
+//! The draw primitives: text takes the style and keeps its bytes, a draw.frame
+//! has its four kinds of cell, a draw.blit leaves spaces alone, the fitting.
+
+use draw
+use grid
+
+fn test_put_text_keeps_bytes_and_takes_the_style() {
+    var g = grid.new(3, 10)
+    let style = grid.cell(0, 250, 234, grid.ATTR_BOLD)
+    draw.put_text(mut g, 1, 2, "ab", style)
+    let a = grid.at(g, 1, 2)
+    assert(a.cp == 97 && a.fg == 250 && a.bg == 234 && a.attrs == grid.ATTR_BOLD, "a in style")
+    assert(grid.at(g, 1, 3).cp == 98 && grid.at(g, 1, 4).cp == 32, "b, then blank")
+    draw.put_text(mut g, 2, 8, "xyz", style)
+    assert(grid.at(g, 2, 9).cp == 121, "the second byte lands; the third is dropped off the edge")
+}
+
+fn test_frame_and_fill() {
+    var g = grid.new(6, 12)
+    let t = grid.cell(9600, 1, 0, 0)
+    let b = grid.cell(9604, 1, 0, 0)
+    let s = grid.cell(9608, 1, 0, 0)
+    let i = grid.cell(32, 7, 0, 0)
+    draw.frame(mut g, 1, 2, 4, 8, t, b, s, i)
+    assert(grid.at(g, 1, 2).cp == 9600 && grid.at(g, 1, 9).cp == 9600, "the top row")
+    assert(grid.at(g, 4, 5).cp == 9604, "the bottom row")
+    assert(grid.at(g, 2, 2).cp == 9608 && grid.at(g, 3, 9).cp == 9608, "the sides")
+    assert(grid.at(g, 2, 5).fg == 7 && grid.at(g, 2, 5).cp == 32, "the inside")
+    assert(
+        grid.at(g, 0, 0).fg == grid.COLOR_DEFAULT && grid.at(g, 5, 11).fg == grid.COLOR_DEFAULT,
+        "outside untouched",
+    )
+    draw.fill(mut g, 0, 0, 2, 2, grid.cell(65, 2, 3, 0))
+    assert(
+        grid.at(g, 1, 1).cp == 65 && grid.at(g, 2, 2).cp == 9608,
+        "the fill's corner and its edge",
+    )
+}
+
+fn test_blit_skips_spaces() {
+    var g = grid.new(4, 6)
+    grid.fill(mut g, grid.cell(46, 1, 1, 0))
+    var lines = List[str]()
+    (mut lines).push("▝█▘")
+    (mut lines).push(" █ ")
+    draw.blit(mut g, 1, 1, lines, grid.cell(0, 250, 137, 0))
+    assert(
+        grid.at(g, 1, 1).cp == 9629 && grid.at(g, 1, 2).cp == 9608 && grid.at(g, 1, 3).cp == 9624,
+        "the head row",
+    )
+    assert(
+        grid.at(g, 2, 1).cp == 46 && grid.at(g, 2, 2).cp == 9608 && grid.at(g, 2, 3).cp == 46,
+        "spaces leave the ground",
+    )
+    assert(grid.at(g, 1, 2).fg == 250 && grid.at(g, 1, 2).bg == 137, "the style")
+}
+
+fn test_fitting() {
+    assert(draw.pad_left("7", 3) == "  7" && draw.pad_left("1234", 3) == "1234", "draw.pad_left")
+    assert(
+        draw.fit("abcdef", 4, false) == "abcd" && draw.fit("abcdef", 4, true) == "cdef",
+        "draw.fit both ends",
+    )
+    assert(draw.fit("ab", 4, true) == "ab", "short text is itself")
+    assert(
+        draw.short_name("/home/u/pack-16.pk") == "pack-16.pk" &&
+            draw.short_name("run.pk") == "run.pk",
+        "draw.short_name",
+    )
+}
