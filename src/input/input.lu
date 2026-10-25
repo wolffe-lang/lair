@@ -9,7 +9,7 @@
 //! macOS terminals send the same for Shift — any modifier but Shift alone
 //! is read as the bare arrow), Esc (a lone ESC once `ESC_TIMEOUT_MS` passes
 //! with nothing after it), Ctrl-C as a byte (when the terminal passes it as
-//! one; the signal path is the terminal's), Enter, Backspace, and every
+//! one; the signal path is the terminal's), Enter, Backspace, Tab, and every
 //! printable byte as a character key (`KEY_CHAR_BASE + b`, `char_of` reads
 //! it back). A game's own vocabulary (pack: Space the leap, `z` the parry,
 //! Shift+Down the parry too, `q` the quit) is its mapping from these, so
@@ -64,6 +64,10 @@ pub const KEY_ENTER: int = 11
 /// Backspace or Delete (0x7f or 0x08).
 pub const KEY_BACKSPACE: int = 12
 
+/// Tab (0x09; cub's lock-on). Shift+Tab, `ESC [ Z`, is a CSI the decoder
+/// recognises and ignores.
+pub const KEY_TAB: int = 13
+
 /// A printable byte `b` (32 to 126) is the key `KEY_CHAR_BASE + b`;
 /// `char_of` reads it back.
 pub const KEY_CHAR_BASE: int = 1000
@@ -105,6 +109,9 @@ pub fn plain_key(b: int) -> int {
     }
     if b == 127 || b == 8 {
         return KEY_BACKSPACE
+    }
+    if b == 9 {
+        return KEY_TAB
     }
     char_key(b)
 }

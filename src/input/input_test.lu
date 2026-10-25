@@ -102,6 +102,8 @@ fn test_plain_keys() {
     check("\n", one(KEY_ENTER), "LF is Enter")
     check("\x7f", one(KEY_BACKSPACE), "DEL is Backspace")
     check("\x08", one(KEY_BACKSPACE), "BS is Backspace")
+    check("\t", one(KEY_TAB), "Tab")
+    check("\x1b[Z", List[int](), "Shift+Tab is recognised and ignored")
     assert(char_of(KEY_CHAR_BASE + 97) == 97, "char_of reads a character back")
     assert(char_of(KEY_ENTER) == -1 && char_of(KEY_UP) == -1, "a key is no character")
     assert(char_key(31) == KEY_NONE && char_key(127) == KEY_NONE, "outside the printable range")

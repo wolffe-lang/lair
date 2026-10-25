@@ -84,6 +84,7 @@ fn run_selftest() -> int {
     (mut rows).push("\x03|10")
     (mut rows).push("\r|11")
     (mut rows).push("\x7f|12")
+    (mut rows).push("\t|13")
     (mut rows).push("\x1b|9")
     (mut rows).push("\x1b |9 1032")
     (mut rows).push("\x1b[57;2u|")
