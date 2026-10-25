@@ -1,0 +1,46 @@
+//! sound — integer PCM synthesis, independent of the terminal and clock.
+//! Port of wolffe-lang/pax's own play/parts.lu and play/orch.lu (px32).
+
+/// Frames per second, as in play.
+pub const RATE: int = 48000
+
+/// Two little-endian 16-bit samples per frame.
+pub const FRAME_BYTES: int = 4
+
+/// One 30 Hz game tick.
+pub const TICK_FRAMES: int = 1600
+
+fn pcm16(mut out: List[byte], sample: int) {
+    let u = if sample < 0 { sample + 65536 } else { sample }
+    (mut out).push((u & 255) as byte)
+    (mut out).push((u >> 8 & 255) as byte)
+}
+
+/// Parse before rendering. A refusal names the source line and offending
+/// part or word. The size limit bounds preparation memory, never a tick.
+pub fn read(text: str) -> Score {
+    if text.len > 262144 {
+        return score_refused("part_too_large: maximum 262144 bytes")
+    }
+    parse_parts(text)
+}
+
+/// Exactly seconds * 48000 stereo S16_LE frames, silence-padded after
+/// the release tails. Preparation only: never call from the frame loop.
+pub fn render(part: Score, seconds: int) -> List[byte] ! {invalid} {
+    if part.err != "" || seconds < 0 || seconds > 30 {
+        return invalid
+    }
+    if seconds == 0 {
+        return List[byte]()
+    }
+    let want = seconds * RATE * FRAME_BYTES
+    var pcm = synthesize(part, seconds * RATE)
+    if pcm.len > want {
+        return copy pcm[0..want]
+    }
+    while pcm.len < want {
+        (mut pcm).push(0 as byte)
+    }
+    pcm
+}

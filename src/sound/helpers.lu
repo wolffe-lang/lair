@@ -1,0 +1,71 @@
+//! Parsing and pitch helpers ported from wolffe-lang/pax user/play/play.lu.
+
+fn words(line: str) -> List[str] {
+    var out = List[str]()
+    let b = line.bytes()
+    var i = 0
+    while i < b.len {
+        let c = b[i] as int
+        if c == 35 {
+            break
+        }
+        if c == 32 || c == 9 || c == 13 {
+            i += 1
+            continue
+        }
+        var j = i
+        while j < b.len && b[j] as int != 32 && b[j] as int != 9 && b[j] as int != 13 {
+            j += 1
+        }
+        (mut out).push(line[i..j])
+        i = j
+    }
+    out
+}
+
+/// A decimal integer of at most six digits, or -1.
+fn number(w: str) -> int {
+    let b = w.bytes()
+    if b.len == 0 || b.len > 6 {
+        return -1
+    }
+    var v = 0
+    for c in b {
+        let d = c as int - 48
+        if d < 0 || d > 9 {
+            return -1
+        }
+        v = v * 10 + d
+    }
+    v
+}
+
+/// The note's frequency at octave 4, in hundredths of a hertz (equal
+/// temperament, A4 = 440 Hz), by semitone above C; -1 out of range.
+fn centi_hz4(semi: int) -> int {
+    match semi {
+        0 => 26163,
+        1 => 27718,
+        2 => 29366,
+        3 => 31113,
+        4 => 32963,
+        5 => 34923,
+        6 => 36999,
+        7 => 39200,
+        8 => 41530,
+        9 => 44000,
+        10 => 46616,
+        11 => 49388,
+        _ => -1,
+    }
+}
+
+fn pow2(k: int) -> int {
+    var v = 1
+    var i = 0
+    while i < k {
+        v = v * 2
+        i += 1
+    }
+    v
+}
