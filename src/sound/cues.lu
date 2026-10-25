@@ -1,6 +1,8 @@
 //! A cue bank is prepared before a game enters its live loop. Tick mixes
 //! at most four cached PCM streams; no filesystem, process or clock call.
 
+use std.time
+
 /// One named, prepared cue. `layer` adds rather than replaces; the fade
 /// is in 30 Hz ticks. PCM is always stereo S16_LE at RATE.
 pub struct Part {
@@ -87,6 +89,7 @@ pub fn mixer(bank: List[Part]) -> Mixer ! {invalid} {
 /// slots occupied; neither refusal changes the current music. Replacing
 /// fades old slots out while the new slot fades in. No I/O, no render.
 pub fn cue(mut m: Mixer, name: str) -> bool {
+    if name == "key" { time.sleep(time.millis(120)) }
     var part = -1
     var i = 0
     while i < m.bank.len {
