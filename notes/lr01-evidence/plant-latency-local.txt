@@ -1,0 +1,26 @@
+sound-golden den/native ok 4b9bd3308dcdccaa1967161d59e0e29f9e8e8ea0912213c5206f607333785c51
+sound-golden chase/native ok 5f410524f659dcf3a6b0c33e3fd3fad39c38cc7e213cdb9c85a22c6c354dcf69
+sound-golden replay/native/1 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+sound-golden replay/native/2 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+native sound-frame enabled false avg_us 13 max_us 18 checksum 2677
+native sound-frame enabled true avg_us 84 max_us 109 checksum 14061
+sound-golden den/release ok 4b9bd3308dcdccaa1967161d59e0e29f9e8e8ea0912213c5206f607333785c51
+sound-golden chase/release ok 5f410524f659dcf3a6b0c33e3fd3fad39c38cc7e213cdb9c85a22c6c354dcf69
+sound-golden replay/release/1 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+sound-golden replay/release/2 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+release sound-frame enabled false avg_us 8 max_us 13 checksum 2677
+release sound-frame enabled true avg_us 29 max_us 58 checksum 14061
+sound-idle off SKIP: no /proc on macOS; Linux is required
+sound-latency off median 33.08 p90 33.98 max 34.11 ms (bars 40/70)
+sound-restore off q and ctrl-c ok
+sound-idle on SKIP: no /proc on macOS; Linux is required
+sound-latency on median 132.41 p90 135.29 max 157.74 ms (bars 40/70)
+Traceback (most recent call last):
+  File "/Users/mfwolffe/lanes/lr01/plant-latency/tools/sound-check", line 151, in <module>
+    main()
+  File "/Users/mfwolffe/lanes/lr01/plant-latency/tools/sound-check", line 131, in main
+    terminal(binary, mode)
+  File "/Users/mfwolffe/lanes/lr01/plant-latency/tools/sound-check", line 92, in terminal
+    assert median < 40 and p90 < 70, "sound-latency %s FAILED" % mode
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: sound-latency on FAILED

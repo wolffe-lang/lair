@@ -1,0 +1,2 @@
+target/den.pcm tests/goldens/sound/den.pcm differ: char 55, line 2
+sound-golden den/native RED as predicted
