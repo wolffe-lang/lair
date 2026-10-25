@@ -10,6 +10,8 @@ LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 export LAIR_ROOT
 . "$LAIR_ROOT/tools/lib-root.sh"
 cd "$GAME_ROOT"
+. "$LAIR_ROOT/tools/lib-mem.sh"
+require_memory
 . "$LAIR_ROOT/tools/lib-toolchain.sh"
 mkdir -p target
 set +e

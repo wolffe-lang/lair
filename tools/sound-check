@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""PCM goldens first, then replay, WAV, refusals and frame/terminal costs.
+No golden regeneration option: the two original parts are reviewed inputs.
+"""
+import hashlib
+import importlib.machinery
+import importlib.util
+import os
+from pathlib import Path
+import select
+import statistics
+import struct
+import subprocess
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parent.parent
+os.chdir(ROOT)
+loader = importlib.machinery.SourceFileLoader("sound_pty", str(ROOT / "tools/pty"))
+pty = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+loader.exec_module(pty)
+if not pty.mac_memory_ok():
+    raise SystemExit(3)
+OUT = ROOT / "target/sound"
+OUT.mkdir(parents=True, exist_ok=True)
+
+
+def run(binary, *args, ok=0, env=None):
+    p = subprocess.run([str(binary), *map(str, args)], capture_output=True, env=env)
+    if p.returncode != ok:
+        raise AssertionError("%s: exit %s (wanted %s): %s" % (args, p.returncode, ok, p.stderr.decode()))
+    return p
+
+
+def identical(got, want, row):
+    a, b = got.read_bytes(), want.read_bytes()
+    if a != b:
+        raise AssertionError("sound-golden %s FAILED: %s != %s" % (row, hashlib.sha256(a).hexdigest(), hashlib.sha256(b).hexdigest()))
+    assert any(a), "silence is not a music golden"
+    print("sound-golden %s ok %s" % (row, hashlib.sha256(a).hexdigest()), flush=True)
+
+
+def ctxt(pid):
+    try:
+        for line in Path("/proc/%s/status" % pid).read_text().splitlines():
+            if line.startswith("voluntary_ctxt_switches:"):
+                return int(line.split()[1])
+    except FileNotFoundError:
+        return None
+
+
+def terminal(binary, mode):
+    s = pty.Session([str(binary), "--sound-loop", str(ROOT / "tests/parts/chase.part"), mode], 24, 80, pty.env_for())
+    s.pump(.4)
+    a = ctxt(s.job)
+    if a is None:
+        print("sound-idle %s SKIP: no /proc on macOS; Linux is required" % mode, flush=True)
+    else:
+        s.pump(3)
+        b = ctxt(s.job)
+        wakes = b - a
+        assert 72 <= wakes <= 108, "sound-idle %s FAILED: %s wakes, bar 72..108" % (mode, wakes)
+        print("sound-idle %s %s wakes / 3s ok" % (mode, wakes), flush=True)
+    samples = []
+    for _ in range(20):
+        s.pump(.13)
+        seen = s.err.count(b"carries_key")
+        start = time.monotonic()
+        os.write(s.master, b"x")
+        end = start + 1
+        while time.monotonic() < end and s.err.count(b"carries_key") == seen:
+            ready, _, _ = select.select([s.master, s.r_err], [], [], .001)
+            for fd in ready:
+                data = os.read(fd, 65536)
+                if fd == s.master:
+                    s.out += data
+                else:
+                    s.err += data
+        if s.err.count(b"carries_key") > seen:
+            samples.append((time.monotonic() - start) * 1000)
+    s.type(b"q")
+    s.finish()
+    problems = []
+    pty.common_checks(s, 0, problems)
+    assert not problems, problems
+    assert len(samples) == 20, "sound-latency missing key acknowledgement"
+    ordered = sorted(samples)
+    median, p90 = statistics.median(samples), ordered[17]
+    print("sound-latency %s median %.2f p90 %.2f max %.2f ms (bars 40/70)" % (mode, median, p90, max(samples)), flush=True)
+    assert median < 40 and p90 < 70, "sound-latency %s FAILED" % mode
+    (OUT / ("latency-" + mode + ".txt")).write_text(repr(samples))
+    # A byte through the terminal, never a signal script.
+    s = pty.Session([str(binary), "--sound-loop", str(ROOT / "tests/parts/den.part"), mode], 24, 80, pty.env_for())
+    s.type(b"\x03")
+    s.finish()
+    problems = []
+    pty.common_checks(s, 0, problems)
+    assert not problems, problems
+    print("sound-restore %s q and ctrl-c ok" % mode, flush=True)
+
+
+def main():
+    for tier in ("native", "release"):
+        binary = ROOT / "target" / tier / "lair"
+        for part in ("den", "chase"):
+            output = OUT / (part + "-" + tier + ".pcm")
+            run(binary, "--render", "tests/parts/" + part + ".part", "4", output)
+            identical(output, ROOT / "tests/goldens/sound" / (part + ".pcm"), part + "/" + tier)
+        for attempt in (1, 2):
+            output = OUT / ("replay-%s-%d.pcm" % (tier, attempt))
+            run(binary, "--sound-replay", "tests/parts/den.part", "tests/parts/chase.part", output)
+            identical(output, ROOT / "tests/goldens/sound/replay.pcm", "replay/%s/%d" % (tier, attempt))
+        wave = OUT / (tier + ".wav")
+        run(binary, "--wav", "tests/parts/den.part", "4", wave)
+        b = wave.read_bytes()
+        assert b[:4] == b"RIFF" and b[8:16] == b"WAVEfmt " and b[36:40] == b"data"
+        assert struct.unpack("<IHHIIHH", b[16:36]) == (16, 1, 2, 48000, 192000, 4, 16)
+        assert struct.unpack("<I", b[4:8])[0] == len(b) - 8 and struct.unpack("<I", b[40:44])[0] == len(b) - 44
+        assert b[44:] == (ROOT / "tests/goldens/sound/den.pcm").read_bytes()
+        bad = OUT / "bad.part"
+        bad.write_text("tempo 120\npart a not-a-timbre\nbar 1\na C4/1\n")
+        failure = run(binary, "--render", bad, "1", OUT / "bad.pcm", ok=2)
+        assert b"not-a-timbre" in failure.stderr and not (OUT / "bad.pcm").exists()
+        for mode in ("off", "on"):
+            r = run(binary, "--sound-bench", "tests/parts/chase.part", mode)
+            print(tier + " " + r.stdout.decode().strip(), flush=True)
+    binary = ROOT / "target/release/lair"
+    for mode in ("off", "on"):
+        terminal(binary, mode)
+    # All children belong to the lair command and are reaped before it exits.
+    # A missing backend logs once even after two attempted starts.
+    missing = dict(os.environ, PATH="/lair-no-players")
+    silent = run(binary, "--sound-output", "linux", OUT / "release.wav", env=missing)
+    assert silent.stderr.count(b"player_missing: paplay") == 1
+    oss = run(binary, "--sound-output", "oss", OUT / "release.wav")
+    assert oss.stderr.count(b"oss_ioctl_unsupported") == 1
+    if sys.platform == "darwin":
+        wave = OUT / "audition.wav"
+        run(binary, "--wav", "tests/parts/den.part", "1", wave)
+        heard = run(binary, "--sound-output", "macos", wave)
+        assert b"started true second false status 0 again 0" in heard.stdout, heard.stdout + heard.stderr
+        print("sound-output afplay child reaped, second start refused, finish idempotent", flush=True)
+    else:
+        print("sound-output Linux named paplay refusal exercised (no device assumed)", flush=True)
+    print("sound-check: green", flush=True)
+
+
+if __name__ == "__main__":
+    main()

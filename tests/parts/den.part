@@ -1,0 +1,12 @@
+title Light under roots
+cue replace fade 3
+tempo 120
+meter 4/4
+part root harp mp pan -25
+part breath flute p pan 30
+bar 1
+root D3,A3/2 F3,C4/2
+breath A4/2_ F4/2
+bar 2
+root G3,D4/2 D3,A3/2
+breath E4/2 D4/2-

@@ -12,6 +12,9 @@ cd "$GAME_ROOT"
 "$LAIR_ROOT/tools/check-fmt"
 "$LAIR_ROOT/tools/test"
 "$LAIR_ROOT/tools/build" --all
+if [ "$GAME_ROOT" = "$LAIR_ROOT" ]; then
+    python3 -I "$LAIR_ROOT/tools/sound-check"
+fi
 "target/release/$GAME" --selftest
 if [ "$GAME_ROOT" != "$LAIR_ROOT" ]; then
     "$LAIR_ROOT/tools/goldens"
