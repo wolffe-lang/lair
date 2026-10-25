@@ -27,7 +27,7 @@ has engine-specific meaning. Missing names and a full four-slot mixer return fal
 current music. A replace cue fades the old slots out while its new slot fades in; a layer cue leaves
 old slots playing. Each slot fades at the beginning and end of its PCM and runs at quarter scale,
 so four simultaneous layers cannot overflow a signed 16-bit sample. Fades count sample frames, not
-wall time. A disappearing slot is available again on the following sample frame.
+wall time. For a short cue, each fade is shortened to at most half its PCM duration. A disappearing slot is available again on the following sample frame.
 
 Preparation is bounded to 262,144 text bytes and 0–30 seconds of output per cue. A full bank holds
 at most 92,160,000 PCM bytes before allocator overhead. Small banks are preferable. The tick's returned

@@ -134,7 +134,9 @@ pub fn tick(mut m: Mixer) -> List[byte] {
             if p >= 0 {
                 let at = m.position[s] * FRAME_BYTES
                 let end = m.bank[p].pcm.len / FRAME_BYTES
-                let fade = m.bank[p].fade * TICK_FRAMES
+                var fade = m.bank[p].fade * TICK_FRAMES
+                if fade > end / 2 { fade = end / 2 }
+                if fade < 1 { fade = 1 }
                 if at >= m.bank[p].pcm.len || m.leaving[s] && m.level[s] <= 0 {
                     m.which[s] = -1
                 } else {

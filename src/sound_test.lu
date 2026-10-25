@@ -122,3 +122,16 @@ fn test_sound_parse_features_and_bounds() {
     let r = sound.render(p, 31) else |_| { List[byte]() }
     assert(r.len == 0, "bounded render")
 }
+
+fn test_sound_short_cue_has_audible_middle() {
+    let a = sound.Part { name: "short", pcm: short_pcm(), layer: false, fade: 30 }
+    var m = sound.mixer([a]) else |_| {
+        assert(false, "bank")
+        sound.Mixer { bank: [], which: [], position: [], level: [], leaving: [] }
+    }
+    assert(sound.cue(mut m, "short"), "start")
+    let first = sound.tick(mut m)
+    var sum = 0
+    for b in first { sum += b as int }
+    assert(sum > 0, "a long requested fade must not silence a short cue")
+}
