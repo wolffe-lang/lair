@@ -1,0 +1,13 @@
+lr01 prediction, committed before implementation, 2026-10-25
+Base aa6c4dc0. Port the org's pax/user/play reader and integer orchestra,
+not another implementation. Preserve 48000 Hz stereo signed 16-bit LE
+(R-lr01-1 A recommended). WAV per cue via afplay on macOS recommended
+(R-lr01-2 A); prepare tables and audio before entering the frame loop.
+Cue and tick do bounded work; no render, child wait or filesystem write
+in cue. Fade and layering must be reflected in deterministic replay PCM.
+Prediction: original den/chase render byte-identically on native/release
+and both hosts; sound's 30 Hz tick averages under 1 ms, adds no wait to
+the frame and no idle wake between the 30 ticks. The two plants change a
+timbre envelope and block the tick, caught by PCM and latency respectively.
+Linux runs only in the container under CPUs 4-7's shared lock. No PAX
+hardware claim; OSS is a stub-tested protocol until the PAX lane.
