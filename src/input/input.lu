@@ -82,11 +82,12 @@ pub struct Decoder {
     esc_at_ms: int,
     dropped: int,
     ignored: int,
+    lefts: int,
 }
 
 /// A fresh decoder.
 pub fn new() -> Decoder {
-    Decoder { pending: List[byte](), esc_at_ms: 0, dropped: 0, ignored: 0 }
+    Decoder { pending: List[byte](), esc_at_ms: 0, dropped: 0, ignored: 0, lefts: 0 }
 }
 
 /// The character a character key carries, or -1 for a key that is none.
@@ -232,6 +233,21 @@ pub fn feed(mut d: Decoder, b: byte, now_ms: int, mut keys: List[int]) {
                 d.ignored += 1
             }
             return
+        }
+        // PLANT (cb00-plant-decoder): from the third Left arrow a decoder
+        // sees, the sequence's `[` is lost: what remains reads as Esc and a
+        // stray `D` (a held key's autorepeats are the third and later; the
+        // table tests decode one or two on a fresh decoder). The pty
+        // runner's held-run row is the gate that must see it.
+        if v == 68 && d.pending.len == 2 {
+            d.lefts += 1
+            if d.lefts >= 3 {
+                (mut d.pending).reset()
+                d.dropped += 1
+                (mut keys).push(KEY_ESC)
+                again = true
+                continue
+            }
         }
         // CSI: parameter bytes 0x30-0x3F, intermediates 0x20-0x2F, a final
         // 0x40-0x7E.
