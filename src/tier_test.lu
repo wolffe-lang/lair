@@ -1,0 +1,72 @@
+//! member: false
+//!
+//! The tiers' machinery: detection, the names, the dialects, the nearest
+//! index round-tripping every index, and the tier.blend's ends and steps.
+
+use grid
+use tier
+
+fn test_detect() {
+    assert(tier.detect("xterm-256color", "en_US.UTF-8") == tier.RICH, "a UTF-8 xterm is rich")
+    assert(tier.detect("linux", "en_US.UTF-8") == tier.PLAIN, "the Linux VT is plain")
+    assert(tier.detect("dumb", "en_US.UTF-8") == tier.PLAIN, "dumb is plain")
+    assert(tier.detect("xterm", "C") == tier.PLAIN, "no UTF-8 is plain")
+    assert(tier.detect("xterm", "C.utf8") == tier.RICH, "utf8 spelled so")
+    assert(
+        tier.truecolor_of("truecolor") && tier.truecolor_of("24bit") && !tier.truecolor_of(""),
+        "COLORTERM",
+    )
+}
+
+fn test_names_round_trip() {
+    assert(
+        (tier.of_name(tier.name(tier.RICH)) else -1) == tier.RICH &&
+            (tier.of_name(tier.name(tier.PLAIN)) else -1) == tier.PLAIN,
+        "names",
+    )
+    assert((tier.of_name("vivid") else -1) == -1, "an unknown tier is parse")
+}
+
+fn test_dialects() {
+    assert(tier.dialect(tier.PLAIN, true) == grid.COLORS_16, "plain is sixteen even with COLORTERM")
+    assert(
+        tier.dialect(tier.RICH, false) == grid.COLORS_256 &&
+            tier.dialect(tier.RICH, true) == grid.COLORS_RGB,
+        "rich",
+    )
+}
+
+fn test_nearest_index_round_trips_the_cube_and_the_greys() {
+    var i = 16
+    while i <= 255 {
+        let (r, g, b) = grid.rgb_of(i)
+        let back = tier.nearest_index(r, g, b)
+        let (r2, g2, b2) = grid.rgb_of(back)
+        assert(r2 == r && g2 == g && b2 == b, "index {i} came back as {back}")
+        i += 1
+    }
+}
+
+fn test_blend_holds_its_ends_and_steps_between() {
+    // pack's path role: 137 by day, 95 at dusk (PALETTE.md).
+    assert(tier.blend(137, 95, 0, 256) == 137, "t 0 is from")
+    assert(tier.blend(137, 95, -5, 256) == 137, "below 0 is from")
+    assert(tier.blend(137, 95, 256, 256) == 95, "t span is to")
+    assert(tier.blend(137, 95, 999, 256) == 95, "beyond span is to")
+    assert(tier.blend(196, 196, 128, 256) == 196, "equal ends never move")
+    var steps = 0
+    var prev = 137
+    var t = 1
+    while t < 256 {
+        let c = tier.blend(137, 95, t, 256)
+        assert(c >= 16 && c <= 255, "an index of the cube or the greys: {c}")
+        if c != prev {
+            steps += 1
+            prev = c
+        }
+        t += 1
+    }
+    assert(steps >= 1, "the tier.blend moves at least once between two unequal keys")
+    let mid = tier.blend(137, 95, 128, 256)
+    assert(mid != 137 || mid != 95, "halfway is some index")
+}

@@ -1,0 +1,133 @@
+//! tier — the two glyph tiers and the colour machinery under every sprite
+//! table (pack's campaign R-PK-4): one cell model, two glyph sets.
+//!
+//! - **rich**: any code point the game's `docs/GLYPHS.md` names (block
+//!   elements, braille, box drawing), the 256-colour cube, RGB where
+//!   `COLORTERM` says so;
+//! - **plain**: code points 0-255 (what PAX's Spleen 8x16 console draws
+//!   today) and the sixteen colours only; `grid.plain_ok` holds a frame to
+//!   that promise.
+//!
+//! The sprites themselves, their colour roles and the palette's keyframes
+//! are the game's (`docs/ENGINE.md`, R-cb00-2 A): a game's sprite table
+//! maps its semantic sprites to cells through this module's tier ids and
+//! builds its palettes with `blend` and `nearest_index`, the dusk
+//! machinery pack's pk03 wrote. Detection from the environment is pure:
+//! the caller reads `TERM`, `COLORTERM` and the locale and asks.
+
+use grid
+
+/// The plain tier.
+pub const PLAIN: int = 0
+
+/// The rich tier.
+pub const RICH: int = 1
+
+/// The colour dialect a tier renders in: the plain tier the sixteen, the
+/// rich tier the 256 cube, or RGB when `truecolor`.
+pub fn dialect(tier: int, truecolor: bool) -> int {
+    if tier == PLAIN {
+        return grid.COLORS_16
+    }
+    if truecolor then grid.COLORS_RGB else grid.COLORS_256
+}
+
+/// The tier's name in a replay file and on the command line.
+pub fn name(tier: int) -> str {
+    if tier == RICH then "rich" else "plain"
+}
+
+/// The tier a name means; `parse` for another word.
+pub fn of_name(s: str) -> int ! {parse} {
+    if s == "rich" {
+        return RICH
+    }
+    if s == "plain" {
+        return PLAIN
+    }
+    parse
+}
+
+/// The tier `TERM` and `LANG`/`LC_ALL` pick when no flag does (pack's
+/// R-pk00-3 A): rich when the locale says UTF-8 and `TERM` is neither
+/// `linux` nor `dumb`, else plain. Pure: the caller reads the environment.
+pub fn detect(term: str, lang: str) -> int {
+    if term == "linux" || term == "dumb" || term == "" {
+        return PLAIN
+    }
+    let l = lang.lower()
+    if l.contains("utf-8") || l.contains("utf8") {
+        return RICH
+    }
+    PLAIN
+}
+
+/// Whether `COLORTERM` names a true-colour terminal.
+pub fn truecolor_of(colorterm: str) -> bool {
+    colorterm == "truecolor" || colorterm == "24bit"
+}
+
+/// The nearest 256-colour index to an RGB, among the cube (16-231) and
+/// the grey ramp (232-255), never the sixteen theme colours: the cube's
+/// levels are 0, 95, 135, 175, 215, 255 and the greys 8 + 10 i. Integer
+/// arithmetic, so a blend quantizes the same on every machine.
+pub fn nearest_index(r: int, g: int, b: int) -> int {
+    let ri = cube_level(r)
+    let gi = cube_level(g)
+    let bi = cube_level(b)
+    let cube = 16 + 36 * ri + 6 * gi + bi
+    let (cr, cg, cb) = grid.rgb_of(cube)
+    let dc = sq(r - cr) + sq(g - cg) + sq(b - cb)
+    var gi2 = ((r + g + b) / 3 - 8 + 5) / 10
+    if gi2 < 0 {
+        gi2 = 0
+    }
+    if gi2 > 23 {
+        gi2 = 23
+    }
+    let grey = 232 + gi2
+    let (gr, gg, gb) = grid.rgb_of(grey)
+    let dg = sq(r - gr) + sq(g - gg) + sq(b - gb)
+    if dg < dc then grey else cube
+}
+
+fn sq(v: int) -> int {
+    v * v
+}
+
+/// The cube level (0-5) nearest a channel value.
+fn cube_level(v: int) -> int {
+    if v < 48 {
+        return 0
+    }
+    if v < 115 {
+        return 1
+    }
+    if v < 155 {
+        return 2
+    }
+    if v < 195 {
+        return 3
+    }
+    if v < 235 {
+        return 4
+    }
+    5
+}
+
+/// Two 256-colour indices blended in RGB at `t` of `span` and quantized
+/// to the nearest index: `from` at `t` 0 or below, `to` at `t` `span` or
+/// above, and between them the straight line through RGB a step at a
+/// time (pack's dusk: a role moves 137, 95, 241, 59 over a phase, never
+/// the keyframes' jump). Two equal indices are returned as they are.
+pub fn blend(from: int, to: int, t: int, span: int) -> int {
+    if from == to || t <= 0 {
+        return from
+    }
+    if t >= span {
+        return to
+    }
+    let (r0, g0, b0) = grid.rgb_of(from)
+    let (r1, g1, b1) = grid.rgb_of(to)
+    nearest_index(r0 + (r1 - r0) * t / span, g0 + (g1 - g0) * t / span, b0 + (b1 - b0) * t / span)
+}
