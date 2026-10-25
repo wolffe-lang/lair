@@ -1,0 +1,24 @@
+# pack on the engine, nomad (macOS arm64), 2026-10-25T10:55:13Z; lair fee1287 by symlink (LAIR_UNPINNED=1)
+goldens: no tests/cases/ under /Users/mfwolffe/lanes/cb00/pack/.lair
+pty: quit ok (darwin arm64, exit 0, 103316 bytes captured)
+pty: ctrl-c ok (darwin arm64, exit 0, 83091 bytes captured)
+pty: trap ok (darwin arm64, exit 134, 82602 bytes captured)
+pty: agree-rich ok (darwin arm64, exit 0, 333798 bytes captured)
+pty: agree-plain ok (darwin arm64, exit 0, 183783 bytes captured)
+pty: held-run ok (darwin arm64, exit 0, 455782 bytes captured; 26 sequences typed, last key at tick 54, peak |heading| 48, straight at 60, column at rest at 59)
+pty: card ok (darwin arm64, exit 0, 702280 bytes captured; death in the trace, 11 events saved, last tick 282, re-run twice identical)
+pty: title ok (darwin arm64, exit 0, 1551704 bytes captured; score 47; 3 closing lines; best file written)
+perf: host Darwin arm64, slack x1, bench args: --seed 7 --bench-shadows 12 --bench-deer 3 --start 900
+bench 80x24 rich frames 300 avg_us 25 p99_us 52 max_us 59 bytes_avg 1236 shadows 12 alive_at_end 8 deer 3 deer_at_end 2
+perf: 80x24 rich avg 25 us < 1000 us ok
+bench 80x24 plain frames 300 avg_us 25 p99_us 42 max_us 50 bytes_avg 615 shadows 12 alive_at_end 8 deer 3 deer_at_end 2
+perf: 80x24 plain avg 25 us < 1000 us ok
+bench 200x60 rich frames 300 avg_us 146 p99_us 291 max_us 315 bytes_avg 14580 shadows 12 alive_at_end 12 deer 3 deer_at_end 3
+perf: 200x60 rich avg 146 us < 4000 us ok
+bench 200x60 plain frames 300 avg_us 145 p99_us 249 max_us 263 bytes_avg 8182 shadows 12 alive_at_end 12 deer 3 deer_at_end 3
+perf: 200x60 plain avg 145 us < 4000 us ok
+perf-idle: idle SKIP (no /proc on this host; measure on Linux)
+perf-idle: latency samples ms (key write to the carrying frame's trace line): 33 13 9 8 12 33 33 33 33 33 9 10 10 10 10 12 10 33 34 11
+perf-idle: latency inner ms (the key's read to the frame's write): 33.1 12.7 9.1 7.8 12.1 32.8 33.1 32.9 32.9 32.9 8.9 9.4 10.1 10.1 10.1 12.0 10.1 32.6 34.1 11.1
+perf-idle: latency run's closing line: pack: ended by the quit key; 225 ticks, 225 frames, 0 dropped, 246 waits, 25 cells, health 100 (0 down), stamina 300; shadows 0 spawned 0 vanquished 0 landed 0 turned; deer 0 seen 0 fed; alive, score 39; render avg 47 us max 102 us; wait late avg 1435 us max 2017 us over 225; seed 7 tier rich 80x24
+perf-idle: latency median 12.1 ms p90 33.1 ms max 34.2 ms over 20 keys (bars median 40, p90 70 ms) ok
