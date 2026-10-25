@@ -192,21 +192,33 @@ PAX's view); the proof is `LAIR_UNPINNED=1 .lair/tools/goldens` there (39 `ok` l
 
 ## 6. The plants
 
-Three draft PRs, each read once and left for the orchestrator to close:
+Three draft PRs, each read once and left for the orchestrator to close. Each took two or three tries, and
+every miss taught the tooling something (section 2's faults 2 and 3; the rows' own limits below):
 
-- **lair `cb00-plant-decoder` (lair#1):** the decoder drops the Left arrow's final byte. Red in the `pack`
-  job (pack on this engine): the `held-run` row — a held Left typed as autorepeats — finds no tick applying a
-  key; lair's own `linux` job red too at `test_csi_arrows`, `test_ss3_arrows`, `test_shift_arrows_are_their_own_keys`
-  and `test_two_sequences_in_one_read`. The first run of this plant (40186687449) was red for the wrong reason
-  — the pack job's toolchain step refused the unpinned engine — and fixed the workflow (section 2, fault 3);
-  the second run's id is in the hand-back.
-- **pack `cb00-plant-pin` (pack#20):** `lair.pin` names lair's stub commit (`4d0805b`, no modules). Red at
-  every job's first step, `the engine, at lair.pin`: `fetch-lair: REFUSED — src/clock points at nothing in
-  the staged engine; the pin and the game disagree` (run 40186889767, the `plan` job). Its first run
-  (40186695507) passed the fetch step and died at the planner, which found the dangling-link check's glob
-  blind (section 2, fault 2).
-- **cub `cb00-plant-camera` (cub#1):** the camera fixed on the start's row, never following the cub north or
-  south. Red at the goldens (`walk-north`, `turn-east`, `scroll`, `diagonal`, `resize`, both tiers) with the
-  unit tests green; its first form (the camera fixed on both axes) was caught by `sim_test`'s camera test
-  before the goldens ran (run 40186702264), so the plant was narrowed to what the unit test does not see.
-  The second run's id is in the hand-back.
+- **lair `cb00-plant-decoder` (lair#1, run 40187564822):** from the third Left arrow a decoder sees, the
+  sequence's `[` is lost, so what remains reads as Esc and a stray `D`. The table tests decode one or two
+  Lefts on a fresh decoder and stay green (lair's `linux` job green); pack's `held-run` row, a held Left
+  typed as autorepeats, meets the Esc as the quit and the row is red in the `pack` job. The first form
+  (every Left dropped) was red in lair's own tests before the row ran; the second (a live-clock condition)
+  never fired, since wolf's monotonic clock counts from a recent origin; the third (the third and later
+  Lefts' final byte dropped) left the row GREEN: the row measures the drift from the last key it saw
+  applied, so dropped keys read as a shorter hold — a limit of the row worth knowing (an issue below).
+  The first run of this plant (40186687449) was red for the wrong reason, the pack job's toolchain step
+  refusing the unpinned engine, and fixed the workflow.
+- **pack `cb00-plant-pin` (pack#20, run 40186889767):** `lair.pin` names lair's stub commit (`4d0805b`, no
+  modules). Red at every job's first step, `the engine, at lair.pin`: `fetch-lair: REFUSED — src/clock
+  points at nothing in the staged engine; the pin and the game disagree` (the `plan` job). Its first run
+  (40186695507) passed the fetch step and died at the planner: the dangling-link check's glob was blind.
+- **cub `cb00-plant-camera` (cub#1, run 40187582382):** the camera stops following the cub twenty columns
+  from the start. Red at the goldens, `scroll-rich` and `scroll-plain` alone, with the 75 unit tests green.
+  Its first form (the camera fixed on both axes) was caught by `sim_test`'s camera test before the goldens
+  ran (run 40186702264); its second (fixed on the start's row) still by that test, since a turn moves the
+  cub north; its third (the camera stopping twenty rows south) was caught by NOTHING (run 40187459044,
+  green): the first `scroll` case walked south into the woods and the trunks stopped the cub within six
+  rows, so the scroll golden scrolled six rows and the clamp never bit — the case was changed to walk west
+  along the open bank, which is the scroll the golden should always have shown.
+
+**Two more issues to file from the plants:** pack: the `held-run` row cannot see a dropped autorepeat (it
+reads the trace's last applied key); a row that counts the keys applied against the sequences typed would.
+cub: the goldens should include a case the camera must follow a long way on both axes (the scroll now runs
+west; a southward scroll needs an open path, cb02's).
