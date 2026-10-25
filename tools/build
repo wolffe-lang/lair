@@ -1,0 +1,56 @@
+#!/bin/sh
+# build — compile the game (or lair itself) on one tier or both.
+#
+#   tools/build [--native|--release|--all]
+#   --native   the fast default backend  -> target/native/<game>
+#   --release  LLVM with the mid-end off -> target/release/<game>, and a
+#              copy at target/<game> (the one the maintainer runs)
+#   --all      both (the default)
+# Every build denies warnings. The program is src/<game>.lu over the
+# modules under src/: the game's own and the engine's, which a game holds
+# as symlinks into .lair/src/ (tools/fetch-lair stages them; a dangling
+# one is the first thing this tool refuses on).
+set -eu
+LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export LAIR_ROOT
+. "$LAIR_ROOT/tools/lib-root.sh"
+cd "$GAME_ROOT"
+. "$LAIR_ROOT/tools/lib-mem.sh"
+require_memory
+. "$LAIR_ROOT/tools/lib-toolchain.sh"
+
+for d in src/*/; do
+    if [ -L "${d%/}" ] && [ ! -e "$d" ]; then
+        echo "build: REFUSED — $d points at nothing; run tools/fetch-lair to stage the engine" >&2
+        exit 1
+    fi
+done
+
+tiers="native release"
+case "${1:-}" in
+--native) tiers=native ;;
+--release) tiers=release ;;
+--all | "") ;;
+*)
+    echo "build: unknown option $1" >&2
+    exit 2
+    ;;
+esac
+
+for tier in $tiers; do
+    mkdir -p "target/$tier"
+    if [ "$tier" = release ]; then
+        # WOLF_MIDEND=0: at wolf 0.2.35 the release tier's mid-end miscompiles
+        # pack's live key path (every key decoded as the quit key while
+        # `pack --selftest` in the same binary passes; the native tier and the
+        # release tier with the mid-end off decode every key; witness: the
+        # pty runner's `quit` and `ctrl-c` rows under pack's
+        # notes/pk00-the-engine.md, the wolf-lang issue to file). The guide's
+        # precedent for a mid-end fault (wolf-lang#146) is this switch.
+        WOLF_MIDEND=0 "$WOLF" build --release --no-cache --deny-warnings "src/$GAME.lu" -o "target/release/$GAME"
+        cp "target/release/$GAME" "target/$GAME"
+    else
+        "$WOLF" build --deny-warnings "src/$GAME.lu" -o "target/native/$GAME"
+    fi
+    echo "build: target/$tier/$GAME"
+done

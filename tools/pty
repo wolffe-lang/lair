@@ -1,0 +1,402 @@
+#!/usr/bin/env python3
+"""tools/pty — drive a game's real binary in a pseudo-terminal and measure
+what the terminal layer promises (the track's rule 4: restored on every
+exit path).
+
+    python3 -I .lair/tools/pty [--bin target/release/<game>]
+                               [--rows quit,ctrl-c,trap,agree-rich,agree-plain,...] [--keep]
+
+A holder process is the pty's session leader so the terminal outlives the
+program (on macOS the slave is revoked when its session leader exits); it
+runs the game as a job in its own foreground process group, the way a shell
+does, and records the terminal's settings before and after. The engine's
+rows, which every lair game passes:
+
+  quit        keys typed (Down, Shift+Down, Space, z), then q: exit 0, the
+              alternate screen entered and left, the cursor hidden then
+              shown, raw mode undone (stty -a before and after equal, less
+              `pendin` on macOS, which the kernel sets after any return to
+              canonical mode, and less the window size), the leave bytes last.
+  ctrl-c      the same, ended by the byte 0x03 typed into the pty: the line
+              discipline raises the interrupt for the foreground group, the
+              game alone, which hears it as a meaning (std.signal) and ends
+              its loop cleanly: exit 0 and the same restore assertions.
+  trap        `--trap-at N` (TRAP_AT): the process traps (exit 134,
+              `wolf-trap` on stderr) and the runtime restores: the same
+              assertions on the terminal.
+  agree-TIER  `--replay tests/cases/<AGREE_CASE>.pk --ticks <AGREE_TICKS>
+              --tier TIER` in an 80x24 pty: the captured bytes replayed
+              through the terminal model (`<game> --apply`) equal the
+              headless run's final frame of the same case and tier, cell for
+              cell, styles too.
+
+The game's own rows (pack: held-run, card, title) live in the game's
+tests/pty_rows.py, a Python file this runner loads by path (never by
+import: `-I`), with `ROWS = {name: function(bin, ctx)}`; a row function
+returns `(session, problems)` as the engine's rows do and may use the
+runner's `Session`, `env_for`, `common_checks`, `screen_text` through `ctx`.
+The game's tests/lair.conf (shell `KEY=VALUE` lines) sets RUN_ARGS (pack's
+`--no-title`, passed to the run rows), TRAP_AT, AGREE_CASE and AGREE_TICKS.
+
+Exit 0 when every row passes; each row prints one line. Captures are kept
+under target/pty/ with --keep (and always for a failed row).
+"""
+import argparse, fcntl, os, pty, re, select, struct, subprocess, sys, termios, time
+
+LAIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(LAIR) if os.path.exists(os.path.join(os.path.dirname(LAIR), "lair.pin")) else LAIR
+
+
+def read_conf(root):
+    """tests/lair.conf: shell KEY=VALUE lines (quotes stripped), or {}."""
+    conf = {}
+    path = os.path.join(root, "tests", "lair.conf")
+    if os.path.exists(path):
+        for line in open(path, encoding="utf-8"):
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            conf[k.strip()] = v.strip().strip('"').strip("'")
+    return conf
+
+
+CONF = read_conf(ROOT)
+RUN_ARGS = CONF.get("RUN_ARGS", "").split()
+TRAP_AT = CONF.get("TRAP_AT", "20")
+AGREE_CASE = CONF.get("AGREE_CASE", "")
+AGREE_TICKS = CONF.get("AGREE_TICKS", "120")
+
+
+def game_name(root):
+    """The entry under src/: the one .lu that is no test."""
+    names = [f[:-3] for f in os.listdir(os.path.join(root, "src")) if f.endswith(".lu") and not f.endswith("_test.lu")]
+    return names[0] if len(names) == 1 else "game"
+
+
+GAME = game_name(ROOT)
+ENTER_ALT, LEAVE_ALT = b"\x1b[?1049h", b"\x1b[?1049l"
+HIDE, SHOW = b"\x1b[?25l", b"\x1b[?25h"
+LEAVE_BYTES = b"\x1b[0m\x1b[?25h\x1b[?1049l"
+
+
+def stty_words(text):
+    """stty -a's words less what a run may legitimately change: the window
+    size (digits) and macOS's `pendin` state flag."""
+    return [w for w in text.split() if w not in ("pendin", "-pendin") and not w.rstrip(";").isdigit()]
+
+
+class Session:
+    """A pseudo-terminal with the game running in it, the way a shell runs
+    a job. A HOLDER process is the session leader and keeps the terminal
+    open (on macOS the slave is revoked once its session leader exits, so
+    the holder outlives the game); the game runs in its own process group,
+    made the terminal's foreground group (tcsetpgrp), so what the line
+    discipline raises for a typed Ctrl-C reaches the game alone. The holder
+    records the terminal's settings before and after (tcgetattr, and
+    `stty -a` on the slave for the record) and the game's exit status on a
+    pipe. Nothing here traps, masks or sends a signal."""
+
+    def __init__(self, argv, rows, cols, env):
+        self.master, slave = pty.openpty()
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+        r_rep, w_rep = os.pipe()
+        r_err, w_err = os.pipe()
+        r_pid, w_pid = os.pipe()
+        self.pid = os.fork()
+        if self.pid == 0:
+            os.setsid()
+            fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
+            before = termios.tcgetattr(slave)
+            stty_before = subprocess.run(["stty", "-a"], stdin=slave, capture_output=True, text=True).stdout
+            game = os.fork()
+            if game == 0:
+                os.setpgid(0, 0)
+                os.dup2(slave, 0); os.dup2(slave, 1); os.dup2(w_err, 2)
+                os.closerange(3, 1024)
+                os.execve(argv[0], argv, env)
+            try:
+                os.setpgid(game, game)
+            except OSError:
+                pass
+            os.tcsetpgrp(slave, game)
+            os.write(w_pid, str(game).encode())
+            os.close(w_pid)
+            _, st = os.waitpid(game, 0)
+            after = termios.tcgetattr(slave)
+            stty_after = subprocess.run(["stty", "-a"], stdin=slave, capture_output=True, text=True).stdout
+            status = os.WEXITSTATUS(st) if os.WIFEXITED(st) else 128 + os.WTERMSIG(st)
+            report = repr((before, after, stty_before, stty_after, status)).encode()
+            os.write(w_rep, report)
+            os._exit(0)
+        for fd in (slave, w_rep, w_err, w_pid):
+            os.close(fd)
+        self.r_rep, self.r_err = r_rep, r_err
+        self.out = b""
+        self.err = b""
+        self.eof = False
+        self.pump(0.3)
+        self.job = int(os.read(r_pid, 32).strip() or b"0")
+        os.close(r_pid)
+
+    def pump(self, seconds):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            fds = [] if self.eof else [self.master]
+            fds.append(self.r_err)
+            r, _, _ = select.select(fds, [], [], 0.02)
+            if self.master in r:
+                try:
+                    chunk = os.read(self.master, 65536)
+                except OSError:
+                    chunk = b""
+                if not chunk:
+                    self.eof = True
+                else:
+                    self.out += chunk
+            if self.r_err in r:
+                chunk = os.read(self.r_err, 65536)
+                if chunk:
+                    self.err += chunk
+
+    def type(self, data, settle=0.08):
+        os.write(self.master, data)
+        self.pump(settle)
+
+    def finish(self, timeout=30.0):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            pid, st = os.waitpid(self.pid, os.WNOHANG)
+            if pid:
+                break
+            self.pump(0.05)
+        else:
+            raise RuntimeError("the session did not end within %.0f s" % timeout)
+        self.pump(0.1)
+        rep = b""
+        while True:
+            c = os.read(self.r_rep, 65536)
+            if not c:
+                break
+            rep += c
+        os.close(self.r_rep); os.close(self.r_err); os.close(self.master)
+        import ast
+        self.before, self.after, self.stty_before, self.stty_after, self.status = ast.literal_eval(rep.decode())
+
+
+PENDIN = 0x20000000
+
+
+def termios_words(attr):
+    """A termios record as comparable words, less macOS's PENDIN state flag
+    (the kernel sets it after any return to canonical mode; the spec's own
+    restore witness records the same) and less the speeds."""
+    iflag, oflag, cflag, lflag, _, _, cc = attr
+    return [iflag, oflag, cflag, lflag - (lflag & PENDIN), [c if isinstance(c, int) else c for c in cc]]
+
+
+def common_checks(s, want_status, problems):
+    if s.status != want_status:
+        problems.append("exit status %d, wanted %d" % (s.status, want_status))
+    if termios_words(s.before) != termios_words(s.after):
+        problems.append("termios differs after: before %r after %r" % (termios_words(s.before)[:4], termios_words(s.after)[:4]))
+    if stty_words(s.stty_before) != stty_words(s.stty_after):
+        b, a = stty_words(s.stty_before), stty_words(s.stty_after)
+        problems.append("stty -a differs after: %s" % " ".join(sorted(set(a) ^ set(b))))
+    if ENTER_ALT not in s.out:
+        problems.append("the alternate screen was never entered")
+    if LEAVE_ALT not in s.out:
+        problems.append("the alternate screen was never left")
+    if HIDE not in s.out or SHOW not in s.out:
+        problems.append("the cursor was not hidden and shown")
+    if not s.out.endswith(LEAVE_BYTES):
+        problems.append("the leave bytes are not the last output (tail %r)" % s.out[-40:])
+
+
+def env_for(tier_term="xterm-256color"):
+    return {"TERM": tier_term, "LANG": "C.UTF-8", "PATH": "/usr/bin:/bin", "HOME": os.environ.get("HOME", "/tmp")}
+
+
+def keep(name, s, args):
+    d = os.path.join(ROOT, "target", "pty")
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, name + ".bin"), "wb") as f:
+        f.write(s.out)
+    with open(os.path.join(d, name + ".err"), "wb") as f:
+        f.write(s.err)
+
+
+def row_keys(bin, name, how):
+    s = Session([bin, "--seed", "7"] + RUN_ARGS, 24, 80, env_for())
+    s.pump(0.4)
+    s.type(b"\x1b[B"); s.type(b"\x1b[1;2B"); s.type(b" "); s.type(b"z")
+    if how == "ctrl-c":
+        # The byte 0x03: the line discipline raises the interrupt for the
+        # foreground group, which is the game alone.
+        s.type(b"\x03")
+    else:
+        s.type(b"q")
+    s.finish()
+    problems = []
+    common_checks(s, 0, problems)
+    want = b"ended by the interrupt" if how == "ctrl-c" else b"ended by the quit key"
+    if want not in s.err:
+        problems.append("the closing line does not say %r: %r" % (want, s.err[-200:]))
+    return s, problems
+
+
+def row_trap(bin):
+    s = Session([bin, "--seed", "7", "--trap-at", TRAP_AT] + RUN_ARGS, 24, 80, env_for())
+    s.finish()
+    problems = []
+    common_checks(s, 134, problems)
+    if b"wolf-trap" not in s.err:
+        problems.append("no wolf-trap report on stderr: %r" % s.err[-200:])
+    return s, problems
+
+
+def row_agree(bin, tier):
+    if not AGREE_CASE:
+        raise RuntimeError("tests/lair.conf names no AGREE_CASE")
+    case = os.path.join(ROOT, "tests", "cases", AGREE_CASE + ".pk")
+    ticks = AGREE_TICKS
+    s = Session([bin, "--replay", case, "--ticks", ticks, "--tier", tier, "--no-truecolor"], 24, 80, env_for())
+    s.finish(timeout=60)
+    problems = []
+    common_checks(s, 0, problems)
+    if b"ended by --ticks" not in s.err:
+        problems.append("the closing line does not say the run ended by --ticks: %r" % s.err[-200:])
+    d = os.path.join(ROOT, "target", "pty")
+    os.makedirs(d, exist_ok=True)
+    cap = os.path.join(d, "agree-%s.bin" % tier)
+    with open(cap, "wb") as f:
+        f.write(s.out)
+    applied = subprocess.run([bin, "--apply", cap, "--size", "80x24"], capture_output=True)
+    if applied.returncode != 0:
+        problems.append("--apply failed: %r" % applied.stderr[-200:])
+        return s, problems
+    text, sty, tail = applied.stdout.decode("utf-8").split("--\n")
+    hd = os.path.join(ROOT, "target", "pty", "headless-%s" % tier)
+    run = subprocess.run([bin, "--headless", "--script", case, "--frames", ticks, "--every", ticks,
+                          "--tier", tier, "--dump", hd], capture_output=True)
+    if run.returncode != 0:
+        problems.append("the headless run failed: %r" % run.stderr[-200:])
+        return s, problems
+    want_text = open(os.path.join(hd, "final.txt"), encoding="utf-8").read()
+    want_sty = open(os.path.join(hd, "final.sty"), encoding="utf-8").read()
+    if text != want_text:
+        for i, (a, b) in enumerate(zip(text.splitlines(), want_text.splitlines())):
+            if a != b:
+                problems.append("glyphs differ first at row %d:\n  pty      %r\n  headless %r" % (i, a, b))
+                break
+        else:
+            problems.append("glyphs differ in length")
+    if sty != want_sty:
+        for i, (a, b) in enumerate(zip(sty.splitlines(), want_sty.splitlines())):
+            if a != b:
+                problems.append("styles differ first at row %d:\n  pty      %s\n  headless %s" % (i, a[:120], b[:120]))
+                break
+        else:
+            problems.append("styles differ in length")
+    if "alt_enters 1 alt_leaves 1 cursor_visible true unknown 0" not in tail:
+        problems.append("the model's tail: %s" % tail.strip())
+    return s, problems
+
+
+def screen_text(bin, capture):
+    """A capture's final screen as text through the terminal model, or ''."""
+    d = os.path.join(ROOT, "target", "pty")
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, "screen.bin")
+    with open(path, "wb") as f:
+        f.write(capture)
+    applied = subprocess.run([bin, "--apply", path, "--size", "80x24"], capture_output=True)
+    if applied.returncode != 0:
+        return ""
+    return applied.stdout.decode("utf-8").split("--\n")[0]
+
+
+def mac_memory_ok():
+    """RULES section 4's gate, nomad's alone: tools/memgate.py decides."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import memgate
+    return memgate.check("pty")
+
+
+class Ctx:
+    """What a game's row may use of the runner."""
+    Session = Session
+    env_for = staticmethod(env_for)
+    common_checks = staticmethod(common_checks)
+    screen_text = staticmethod(screen_text)
+    stty_words = staticmethod(stty_words)
+    ROOT = ROOT
+    GAME = GAME
+    RUN_ARGS = RUN_ARGS
+
+
+def game_rows():
+    """The game's tests/pty_rows.py, loaded by path: its ROWS dict, or {}."""
+    path = os.path.join(ROOT, "tests", "pty_rows.py")
+    if not os.path.exists(path):
+        return {}
+    import importlib.machinery, importlib.util
+    loader = importlib.machinery.SourceFileLoader("pty_rows", path)
+    mod = importlib.util.module_from_spec(importlib.util.spec_from_loader("pty_rows", loader))
+    loader.exec_module(mod)
+    return dict(getattr(mod, "ROWS", {}))
+
+
+ENGINE_ROWS = ["quit", "ctrl-c", "trap", "agree-rich", "agree-plain"]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--bin", default=os.path.join(ROOT, "target", "release", GAME))
+    ap.add_argument("--rows", default="")
+    ap.add_argument("--keep", action="store_true")
+    a = ap.parse_args()
+    if not mac_memory_ok():
+        return 3
+    extra = game_rows()
+    rows = a.rows.split(",") if a.rows else ENGINE_ROWS + list(extra)
+    bin = os.path.abspath(a.bin)
+    if not os.access(bin, os.X_OK):
+        print("pty: no binary at %s" % bin)
+        return 2
+    failed = 0
+    for name in rows:
+        try:
+            if name in ("quit", "ctrl-c"):
+                s, problems = row_keys(bin, name, name)
+            elif name == "trap":
+                s, problems = row_trap(bin)
+            elif name.startswith("agree-"):
+                s, problems = row_agree(bin, name.split("-", 1)[1])
+            elif name in extra:
+                s, problems = extra[name](bin, Ctx)
+            else:
+                print("pty: %s: no such row" % name)
+                failed += 1
+                continue
+        except Exception as e:
+            print("pty: %s FAILED: %s" % (name, e))
+            failed += 1
+            continue
+        if problems or a.keep:
+            keep(name, s, a)
+        if problems:
+            failed += 1
+            print("pty: %s FAILED (%s %s):" % (name, sys.platform, os.uname().machine))
+            if getattr(s, "evidence", None):
+                print("  evidence: " + s.evidence)
+            for p in problems:
+                print("  - " + p)
+        else:
+            extra = ("; " + s.evidence) if getattr(s, "evidence", None) else ""
+            print("pty: %s ok (%s %s, exit %d, %d bytes captured%s)" % (name, sys.platform, os.uname().machine, s.status, len(s.out), extra))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

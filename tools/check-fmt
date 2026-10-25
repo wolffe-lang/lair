@@ -1,0 +1,10 @@
+#!/bin/sh
+# check-fmt — wolf fmt --check over src/ (rule 2: fmt is law).
+set -eu
+LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export LAIR_ROOT
+. "$LAIR_ROOT/tools/lib-root.sh"
+cd "$GAME_ROOT"
+. "$LAIR_ROOT/tools/lib-toolchain.sh"
+"$WOLF" fmt --check src
+echo "check-fmt: canonical"

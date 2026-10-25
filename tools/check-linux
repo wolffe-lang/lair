@@ -1,0 +1,20 @@
+#!/bin/sh
+# check-linux — what the Linux leg runs INSIDE the container: the toolchain
+# is already staged in .wolf-bin/ (fetched on the host by digest), so this
+# is tools/check's list: fmt, the unit tests, both builds, the selftest,
+# and for a game the goldens and the pty rows. The identity check in
+# lib-toolchain.sh still runs through every tool.
+set -eu
+LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export LAIR_ROOT
+. "$LAIR_ROOT/tools/lib-root.sh"
+cd "$GAME_ROOT"
+"$LAIR_ROOT/tools/check-fmt"
+"$LAIR_ROOT/tools/test"
+"$LAIR_ROOT/tools/build" --all
+"target/release/$GAME" --selftest
+if [ "$GAME_ROOT" != "$LAIR_ROOT" ]; then
+    "$LAIR_ROOT/tools/goldens"
+    python3 -I "$LAIR_ROOT/tools/pty" --bin "target/release/$GAME"
+fi
+echo "check-linux: green"

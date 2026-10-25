@@ -1,0 +1,58 @@
+#!/bin/sh
+# perf — the performance gate (pack's campaign: a frame's render under 1 ms
+# at 80x24 and under 4 ms at 200x60 on release; input-to-frame latency one
+# tick; zero wake-ups between ticks at idle).
+#
+#   tools/perf [--bin BIN]        LAIR_PERF_SLACK=N multiplies the bars
+#                                 (1 on a kasumi-class host, 3 on CI)
+#
+# The render bars come from `<game> --bench` (render + diff a frame,
+# release, 300 frames of a scripted run, both tiers, both sizes: the
+# average is gated, the p99 and max recorded); the game's tests/lair.conf
+# names the bench's own arguments (BENCH_ARGS: pack's dozen shadows and
+# three deer at dusk). The idle and latency rows come from tools/perf-idle,
+# which drives the real binary in a pty: the voluntary context switches of
+# a standing game over 10 s (Linux's /proc; a loud SKIP elsewhere) and the
+# time from a key to the frame that carries it. Evidence lands in
+# target/perf/.
+set -eu
+LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export LAIR_ROOT
+. "$LAIR_ROOT/tools/lib-root.sh"
+cd "$GAME_ROOT"
+. "$LAIR_ROOT/tools/lib-mem.sh"
+require_memory
+BENCH_ARGS=
+[ -f tests/lair.conf ] && . ./tests/lair.conf
+bin="target/release/$GAME"
+while [ $# -gt 0 ]; do
+    case $1 in
+    --bin) bin=$2; shift ;;
+    *) echo "perf: unknown option $1" >&2; exit 2 ;;
+    esac
+    shift
+done
+[ -x "$bin" ] || "$LAIR_ROOT/tools/build" --release
+slack=${LAIR_PERF_SLACK:-1}
+mkdir -p target/perf
+status=0
+echo "perf: host $(uname -s) $(uname -m), slack x$slack, bench args: ${BENCH_ARGS:-(none)}" | tee target/perf/summary.txt
+for spec in "80x24 1000" "200x60 4000"; do
+    size=${spec% *}
+    bar=${spec#* }
+    for tier in rich plain; do
+        # shellcheck disable=SC2086
+        line=$("$bin" --bench --size "$size" --tier "$tier" --frames 300 $BENCH_ARGS)
+        echo "$line" | tee -a target/perf/summary.txt
+        avg=$(echo "$line" | sed -n 's/.*avg_us \([0-9]*\).*/\1/p')
+        limit=$((bar * slack))
+        if [ "$avg" -lt "$limit" ]; then
+            echo "perf: $size $tier avg ${avg} us < ${limit} us ok" | tee -a target/perf/summary.txt
+        else
+            echo "perf: $size $tier avg ${avg} us >= ${limit} us FAILED" | tee -a target/perf/summary.txt
+            status=1
+        fi
+    done
+done
+python3 -I "$LAIR_ROOT/tools/perf-idle" --bin "$bin" | tee -a target/perf/summary.txt || status=1
+exit $status

@@ -1,0 +1,31 @@
+#!/bin/sh
+# in-container — run a command in the Linux leg's container (ci/Containerfile)
+# with the game's root mounted at /work: podman on a lane host, docker on CI
+# (LAIR_ENGINE), pinned to LAIR_CPUS with taskset inside when set (the
+# rootless engines reach no cpuset; kasumi's block is `4-7`, hasu's
+# `6-11`). The engine must be a STAGED tree under the game's root
+# (tools/fetch-lair), not a symlink out of it: the container sees /work alone.
+#
+#   tools/in-container CMD ARGS...
+#   LAIR_ENGINE=docker .lair/tools/in-container .lair/tools/check-linux
+set -eu
+LAIR_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export LAIR_ROOT
+. "$LAIR_ROOT/tools/lib-root.sh"
+cd "$GAME_ROOT"
+engine=${LAIR_ENGINE:-podman}
+cpus=${LAIR_CPUS:-}
+if command -v sha256sum >/dev/null 2>&1; then
+    tag=$(sha256sum "$LAIR_ROOT/ci/Containerfile" | cut -c1-16)
+else
+    tag=$(shasum -a 256 "$LAIR_ROOT/ci/Containerfile" | cut -c1-16)
+fi
+image="localhost/pack-ci:$tag"
+if ! "$engine" image inspect "$image" >/dev/null 2>&1; then
+    "$engine" build --memory 12g -t "$image" -f "$LAIR_ROOT/ci/Containerfile" "$LAIR_ROOT/ci"
+fi
+set -- "$@"
+if [ -n "$cpus" ]; then
+    exec "$engine" run --rm --memory 12g -e LAIR_UNPINNED -v "$GAME_ROOT:/work" -w /work "$image" taskset -c "$cpus" "$@"
+fi
+exec "$engine" run --rm --memory 12g -e LAIR_UNPINNED -v "$GAME_ROOT:/work" -w /work "$image" "$@"
