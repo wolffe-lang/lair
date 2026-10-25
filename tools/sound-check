@@ -59,7 +59,7 @@ def terminal(binary, mode):
         s.pump(3)
         b = ctxt(s.job)
         wakes = b - a
-        assert 72 <= wakes <= 108, "sound-idle %s FAILED: %s wakes, bar 72..108" % (mode, wakes)
+        idle_ok = 72 <= wakes <= 108
         print("sound-idle %s %s wakes / 3s ok" % (mode, wakes), flush=True)
     samples = []
     for _ in range(20):
@@ -83,6 +83,8 @@ def terminal(binary, mode):
     problems = []
     pty.common_checks(s, 0, problems)
     assert not problems, problems
+    if a is not None:
+        assert idle_ok, "sound-idle %s FAILED: %s wakes, bar 72..108" % (mode, wakes)
     assert len(samples) == 20, "sound-latency missing key acknowledgement"
     ordered = sorted(samples)
     median, p90 = statistics.median(samples), ordered[17]

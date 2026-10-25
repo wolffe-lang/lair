@@ -10,7 +10,7 @@ use std.signal
 /// only after the frame and its sound tick, so latency cannot be vacuous.
 pub fn live_file(path: str, enabled: bool) -> int {
     var p = load(path, 4) else |_| { return 2 }
-    p.name = "cue"
+    p.name = "key"
     p.layer = true
     var m = mixer([p]) else |_| { return 2 }
     var terminal = term.open() else |_| { return 2 }
@@ -39,7 +39,7 @@ pub fn live_file(path: str, enabled: bool) -> int {
         let due = clock.advance(mut c, clock.now_ns())
         if due > 0 && !quit {
             if enabled {
-                if c.ticks % 90 < 4 { let _ok = cue(mut m, "cue") }
+                if key || c.ticks % 90 < 4 { let _ok = cue(mut m, "key") }
                 let pcm = tick(mut m)
                 checksum += pcm[100] as int
             }
