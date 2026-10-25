@@ -91,6 +91,10 @@ jobs:
     if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack')
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    env:
+      # The engine under test is never the one pack pins: every engine tool
+      # in this job says so loudly instead of refusing (tools/lib-root.sh).
+      LAIR_UNPINNED: '1'
     steps:
       - uses: actions/checkout@v4
       - name: pack, at the first ref of ci/games.conf that exists
@@ -104,7 +108,6 @@ jobs:
       - name: pack's Linux leg on the engine under test
         env:
           LAIR_ENGINE: docker
-          LAIR_UNPINNED: '1'
         run: game/.lair/tools/in-container .lair/tools/check-linux
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
