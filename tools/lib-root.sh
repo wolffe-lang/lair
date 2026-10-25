@@ -10,6 +10,8 @@
 #   GAME       the program's name: the one `src/*.lu` that is no test
 #              (`pack`, `cub`, `lair`); the binary is target/<tier>/<GAME>
 #              and the entry src/<GAME>.lu
+# Every tool sets LAIR_ROOT from its own path with `pwd -L` and a name
+# strip (never `cd ..`, which a shell may resolve through a symlink).
 # The toolchain is staged into $GAME_ROOT/.wolf-bin (one per checkout, so a
 # re-staged engine never costs a re-fetched compiler).
 #
@@ -20,8 +22,10 @@
 # run a game on another engine: lair's own CI, which runs pack on the
 # engine under test, and a lane developing both at once.
 : "${LAIR_ROOT:?lib-root.sh needs LAIR_ROOT}"
-if [ -f "$LAIR_ROOT/../lair.pin" ]; then
-    GAME_ROOT=$(cd "$LAIR_ROOT/.." && pwd)
+# The parent by the NAME, never through `..`: a lane's `.lair` may be a
+# symlink to a lair checkout, and `..` would walk out of the game.
+if [ -f "${LAIR_ROOT%/*}/lair.pin" ]; then
+    GAME_ROOT=${LAIR_ROOT%/*}
 else
     GAME_ROOT=$LAIR_ROOT
 fi
