@@ -54,6 +54,7 @@ test src/sound_test.lu::test_sound_zero_render ... ok
 test src/sound_test.lu::test_sound_wav_and_oss ... ok
 test src/sound_test.lu::test_sound_cues_replay_fades_and_capacity ... ok
 test src/sound_test.lu::test_sound_parse_features_and_bounds ... ok
+test src/sound_test.lu::test_sound_short_cue_has_audible_middle ... ok
 test src/tier_test.lu::test_detect ... ok
 test src/tier_test.lu::test_names_round_trip ... ok
 test src/tier_test.lu::test_dialects ... ok
@@ -66,7 +67,7 @@ test src/world/world_test.lu::test_forest_density_rises ... ok
 test src/world/world_test.lu::test_clearing_reads_and_a_stand_is_the_woods_with_more_trunks ... ok
 test src/world/world_test.lu::test_density_bands_are_ordered ... ok
 test src/world/world_test.lu::test_hash_range ... ok
-wolf test: 67 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+wolf test: 68 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
 test: 0 SKIP lines
 build: target/native/lair
 build: target/release/lair
@@ -74,19 +75,19 @@ sound-golden den/native ok 4b9bd3308dcdccaa1967161d59e0e29f9e8e8ea0912213c5206f6
 sound-golden chase/native ok 5f410524f659dcf3a6b0c33e3fd3fad39c38cc7e213cdb9c85a22c6c354dcf69
 sound-golden replay/native/1 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
 sound-golden replay/native/2 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
-native sound-frame enabled false avg_us 15 max_us 29 checksum 2677
-native sound-frame enabled true avg_us 88 max_us 106 checksum 14061
+native sound-frame enabled false avg_us 14 max_us 25 checksum 2677
+native sound-frame enabled true avg_us 86 max_us 110 checksum 14061
 sound-golden den/release ok 4b9bd3308dcdccaa1967161d59e0e29f9e8e8ea0912213c5206f607333785c51
 sound-golden chase/release ok 5f410524f659dcf3a6b0c33e3fd3fad39c38cc7e213cdb9c85a22c6c354dcf69
 sound-golden replay/release/1 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
 sound-golden replay/release/2 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
-release sound-frame enabled false avg_us 9 max_us 20 checksum 2677
-release sound-frame enabled true avg_us 30 max_us 46 checksum 14061
+release sound-frame enabled false avg_us 8 max_us 17 checksum 2677
+release sound-frame enabled true avg_us 29 max_us 38 checksum 14061
 sound-idle off SKIP: no /proc on macOS; Linux is required
-sound-latency off median 33.12 p90 34.11 max 34.12 ms (bars 40/70)
+sound-latency off median 33.12 p90 34.12 max 34.18 ms (bars 40/70)
 sound-restore off q and ctrl-c ok
 sound-idle on SKIP: no /proc on macOS; Linux is required
-sound-latency on median 33.17 p90 34.03 max 34.20 ms (bars 40/70)
+sound-latency on median 33.15 p90 34.13 max 34.19 ms (bars 40/70)
 sound-restore on q and ctrl-c ok
 sound-output afplay child reaped, second start refused, finish idempotent
 sound-check: green
