@@ -1,0 +1,11 @@
+//! grid — one struct.
+
+/// A cell.
+pub struct Cell {
+    cp: int,
+}
+
+/// The blank cell.
+pub fn blank() -> Cell {
+    Cell { cp: 32 }
+}

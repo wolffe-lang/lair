@@ -1,0 +1,7 @@
+//! tier — imports its sibling module, as D32 allows inside a package.
+use grid
+
+/// The blank glyph.
+pub fn glyph() -> grid.Cell {
+    grid.blank()
+}

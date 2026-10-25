@@ -1,0 +1,6 @@
+//! eng — a two-module package: `tier` imports its sibling `grid`.
+use tier
+
+fn main() {
+    print("eng {tier.glyph().cp}")
+}

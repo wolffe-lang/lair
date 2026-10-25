@@ -1,0 +1,6 @@
+//! app — depends on `eng` by path and imports its `tier` module.
+use eng.tier
+
+fn main() {
+    print("app {tier.glyph().cp}")
+}

@@ -1,0 +1,9 @@
+pkg {
+    name:    "wolffe-lang/app",
+    version: "0.1.0",
+    edition: "1",
+
+    deps: {
+        eng: { path: "../eng" },
+    },
+}
