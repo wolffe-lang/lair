@@ -1,0 +1,114 @@
+//! probe — the glyph-width probe (`--probe-glyphs`): each rich code point
+//! written to the terminal and the cursor asked where it landed (`CSI 6 n`,
+//! the cursor position report); the width it took, printed as a table
+//! after the terminal is restored. The measurement a game's
+//! `docs/GLYPHS.md` records per terminal; a photo is not evidence. A pty
+//! has no font, so the runner cannot measure this: the maintainer runs it
+//! in Terminal.app, iTerm2, a Linux VT and PAX's console.
+
+use clock
+use grid
+use term
+
+/// Measure `cps` on the terminal and print the table (`code point | width
+/// | terminal NAME`); `prog` names the program in a refusal. The exit code:
+/// 0, 2 for a refused terminal, 3 for a mode it would not take.
+pub fn run(prog: str, cps: List[int]) -> int {
+    var t = term.open() else |e| {
+        eprint(term.message("{e}", prog))
+        return 2
+    }
+    term.enter(mut t) else |_| {
+        eprint(term.message("io", prog))
+        return 3
+    }
+    var widths = List[int]()
+    for cp in cps {
+        var probe = List[byte]()
+        grid.push_str(mut probe, "\x1b[2;1H\x1b[2K")
+        grid.push_utf8(mut probe, cp)
+        grid.push_str(mut probe, "\x1b[6n")
+        term.write(probe) else |_| {}
+        // The reply: ESC [ row ; col R, within 200 ms.
+        var col = -1
+        var waited = 0
+        var reply = List[byte]()
+        while col < 0 && waited < 10 {
+            var c = clock.new(clock.now_ns())
+            let w = clock.wait_until(mut c, clock.now_ns() + 20000000, term.signal_set()) else |_| {
+                break
+            }
+            if w.input_ready {
+                let got = term.read_keys(64) else |_| {
+                    break
+                }
+                for b in got {
+                    (mut reply).push(b)
+                }
+                col = cpr_col(reply)
+            }
+            waited += 1
+        }
+        (mut widths).push(if col < 0 then -1 else col - 1)
+    }
+    term.leave(mut t)
+    print("code point | width | terminal {t.term_name}")
+    var i = 0
+    while i < cps.len {
+        print("U+{hex4(cps[i])} | {widths[i]} | {string_of(cps[i])}")
+        i += 1
+    }
+    0
+}
+
+fn string_of(cp: int) -> str {
+    var v = List[byte]()
+    grid.push_utf8(mut v, cp)
+    str_from_utf8(v) else "?"
+}
+
+/// `n` as four upper-case hex digits.
+pub fn hex4(n: int) -> str {
+    let digits = "0123456789ABCDEF"
+    var s = ""
+    var p = 4096
+    while p >= 1 {
+        let d = n / p % 16
+        s = s + digits[d..d + 1]
+        p /= 16
+    }
+    s
+}
+
+/// The column of a cursor position report `ESC [ row ; col R` in `v`, or
+/// -1 when none is complete.
+pub fn cpr_col(v: List[byte]) -> int {
+    var i = 0
+    while i + 3 < v.len {
+        if v[i] as int == 27 && v[i + 1] as int == 91 {
+            var j = i + 2
+            var row = 0
+            var col = 0
+            var second = false
+            while j < v.len {
+                let b = v[j] as int
+                if b >= 48 && b <= 57 {
+                    if second {
+                        col = col * 10 + b - 48
+                    } else {
+                        row = row * 10 + b - 48
+                    }
+                } else if b == 59 {
+                    second = true
+                } else if b == 82 {
+                    return col
+                } else {
+                    break
+                }
+                j += 1
+            }
+        }
+        i += 1
+    }
+    -1
+}

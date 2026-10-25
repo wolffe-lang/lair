@@ -1,0 +1,107 @@
+//! headless — the goldens' side of the engine: a frame written as cell
+//! text and styles (`frame-NNNN.txt`/`.sty`, `final.txt`/`.sty`), a
+//! captured byte stream applied through the terminal model and written
+//! back as the same two texts (the pty runner's `--apply`), and the diff
+//! property every shipped binary is held to (`--selftest`). A game's
+//! headless run steps its own simulation and calls `write_frame`; the
+//! formats are `grid.dump_text` and `grid.dump_styles`, so a golden from
+//! any lair game diffs with `diff -r`.
+
+use grid
+use std.fs
+
+/// `n` as four digits (`frame-0120`).
+pub fn pad4(n: int) -> str {
+    if n < 10 {
+        return "000{n}"
+    }
+    if n < 100 {
+        return "00{n}"
+    }
+    if n < 1000 {
+        return "0{n}"
+    }
+    "{n}"
+}
+
+/// `g` written as `dir/name.txt` (the glyphs) and `dir/name.sty` (the
+/// styles). `io` when either write fails.
+pub fn write_frame(dir: str, name: str, g: grid.Grid) -> () ! {io} {
+    var text = List[byte]()
+    grid.dump_text(g, mut text)
+    fs.write_bytes("{dir}/{name}.txt", text) else |_| {
+        return io
+    }
+    var sty = List[byte]()
+    grid.dump_styles(g, mut sty)
+    fs.write_bytes("{dir}/{name}.sty", sty) else |_| {
+        return io
+    }
+}
+
+/// A captured byte stream through the terminal model of `rows` by `cols`:
+/// the resulting screen as text, `--`, the styles, `--`, and a tail naming
+/// what the private modes recorded (`alt_enters`, `alt_leaves`,
+/// `cursor_visible`, `unknown`), so the pty runner can compare a live
+/// session's last screen with a headless `final` cell for cell.
+pub fn apply(bytes: List[byte], cols: int, rows: int) -> List[byte] {
+    var m = grid.model_new(rows, cols)
+    grid.model_feed(mut m, bytes)
+    var out = List[byte]()
+    grid.dump_text(m.grid, mut out)
+    grid.push_str(mut out, "--\n")
+    grid.dump_styles(m.grid, mut out)
+    grid.push_str(
+        mut out,
+        "--\nalt_enters {m.alt_enters} alt_leaves {m.alt_leaves} cursor_visible {m.cursor_visible} unknown {m.unknown}\n",
+    )
+    out
+}
+
+/// The diff property on THIS binary: twelve 5 by 9 frames of varied cells,
+/// each diffed against the last in the 256 dialect and fed to the model,
+/// which must then show the frame. The number of frames that failed, with
+/// a line printed for each (the first differing cell).
+pub fn diff_property() -> int {
+    var bad = 0
+    var m = grid.model_new(5, 9)
+    var prev = grid.new(5, 9)
+    var pen = grid.pen_new()
+    var salt = 0
+    while salt < 12 {
+        var next = grid.new(5, 9)
+        var r = 0
+        while r < 5 {
+            var c = 0
+            while c < 9 {
+                let k = (r * 7 + c * 13 + salt) % 11
+                if k < 7 {
+                    grid.put(
+                        mut next,
+                        r,
+                        c,
+                        grid.cell(
+                            9600 + k,
+                            (k * 37 + salt) % 256,
+                            if k % 3 == 0 then grid.COLOR_DEFAULT else k * 20,
+                            k % 8 & grid.ATTR_MASK,
+                        ),
+                    )
+                }
+                c += 1
+            }
+            r += 1
+        }
+        var out = List[byte]()
+        grid.diff(prev, next, salt == 0, mut pen, mut out, grid.COLORS_256)
+        grid.model_feed(mut m, out)
+        if !grid.model_equals(m, next) {
+            let (dr, dc) = grid.model_first_diff(m, next)
+            print("selftest: diff property: frame {salt} differs first at {dr},{dc}")
+            bad += 1
+        }
+        prev = next
+        salt += 1
+    }
+    bad
+}

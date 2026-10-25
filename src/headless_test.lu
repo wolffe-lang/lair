@@ -1,0 +1,40 @@
+//! member: false
+//!
+//! The headless formats: the frame number's digits, a stream applied
+//! through the model reads back as the grid, the diff property holds.
+
+use grid
+use headless
+
+fn test_pad4() {
+    assert(
+        headless.pad4(0) == "0000" && headless.pad4(7) == "0007" && headless.pad4(42) == "0042",
+        "small",
+    )
+    assert(
+        headless.pad4(999) == "0999" &&
+            headless.pad4(1200) == "1200" &&
+            headless.pad4(12345) == "12345",
+        "large",
+    )
+}
+
+fn test_apply_reads_a_frame_back() {
+    var g = grid.new(2, 4)
+    grid.put(mut g, 0, 0, grid.cell(9608, 250, 137, 0))
+    grid.put(mut g, 1, 3, grid.cell(87, 15, 3, grid.ATTR_BOLD))
+    var out = List[byte]()
+    var pen = grid.pen_new()
+    grid.diff(grid.new(2, 4), g, true, mut pen, mut out, grid.COLORS_256)
+    let text = str_from_utf8(headless.apply(out, 4, 2)) else ""
+    var want = List[byte]()
+    grid.dump_text(g, mut want)
+    grid.push_str(mut want, "--\n")
+    grid.dump_styles(g, mut want)
+    grid.push_str(mut want, "--\nalt_enters 0 alt_leaves 0 cursor_visible true unknown 0\n")
+    assert(text == (str_from_utf8(want) else "x"), "the applied stream is the grid:\n{text}")
+}
+
+fn test_diff_property_holds() {
+    assert(headless.diff_property() == 0, "every frame reads back")
+}

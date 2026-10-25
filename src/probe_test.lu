@@ -1,0 +1,27 @@
+//! member: false
+//!
+//! The probe's pure parts: the hex digits and the cursor position report.
+
+use probe
+
+fn raw_bytes(s: str) -> List[byte] {
+    var v = List[byte]()
+    for b in s.bytes() {
+        (mut v).push(b)
+    }
+    v
+}
+
+fn test_hex4() {
+    assert(
+        probe.hex4(0) == "0000" && probe.hex4(9608) == "2588" && probe.hex4(255) == "00FF",
+        "probe.hex4",
+    )
+}
+
+fn test_cpr_col() {
+    assert(probe.cpr_col(raw_bytes("\x1b[2;3R")) == 3, "a report")
+    assert(probe.cpr_col(raw_bytes("junk\x1b[12;41R")) == 41, "after junk, two digits")
+    assert(probe.cpr_col(raw_bytes("\x1b[2;3")) == -1, "incomplete")
+    assert(probe.cpr_col(raw_bytes("")) == -1, "nothing")
+}
