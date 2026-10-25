@@ -1,0 +1,334 @@
+//! input — bytes from the terminal to keys, and the held-key model. A
+//! decoder with a pending buffer, so a sequence split across reads decodes
+//! the same as one read (table-tested both ways), and a lone ESC resolved
+//! by a timeout the caller measures, never by a guess.
+//!
+//! The keys are the terminal's, not a game's: the four arrows, the four
+//! Shift+arrows (the modifier form `ESC [ 1 ; m X` with m = 1 + Shift +
+//! 2 Alt + 4 Ctrl, PAX's console and the Linux VT, px59's measurement;
+//! macOS terminals send the same for Shift — any modifier but Shift alone
+//! is read as the bare arrow), Esc (a lone ESC once `ESC_TIMEOUT_MS` passes
+//! with nothing after it), Ctrl-C as a byte (when the terminal passes it as
+//! one; the signal path is the terminal's), Enter, Backspace, and every
+//! printable byte as a character key (`KEY_CHAR_BASE + b`, `char_of` reads
+//! it back). A game's own vocabulary (pack: Space the leap, `z` the parry,
+//! Shift+Down the parry too, `q` the quit) is its mapping from these, so
+//! two games share one decoder and one table test. The kitty/CSI-u form
+//! `ESC [ code ; mods u` and the tilde form `ESC [ n ~` are recognised and
+//! ignored; an unknown CSI is consumed; any other byte is dropped and
+//! counted in `dropped`. The game's `docs/KEYS.md` has what each terminal
+//! was measured to send.
+//!
+//! **The held-key model** (pack's pk01, the maintainer's R-PK-7 (b)): a
+//! terminal has no key-up, so a held key is an autorepeat run of presses;
+//! `Hold` treats a run as a held state released one repeat interval after
+//! the last press, from ticks alone, so a replay reproduces it.
+
+/// No key (never pushed; the zero value).
+pub const KEY_NONE: int = 0
+
+/// Up.
+pub const KEY_UP: int = 1
+
+/// Down.
+pub const KEY_DOWN: int = 2
+
+/// Left.
+pub const KEY_LEFT: int = 3
+
+/// Right.
+pub const KEY_RIGHT: int = 4
+
+/// Shift+Up (`ESC [ 1 ; 2 A`).
+pub const KEY_SHIFT_UP: int = 5
+
+/// Shift+Down (`ESC [ 1 ; 2 B`: pack's parry).
+pub const KEY_SHIFT_DOWN: int = 6
+
+/// Shift+Left.
+pub const KEY_SHIFT_LEFT: int = 7
+
+/// Shift+Right.
+pub const KEY_SHIFT_RIGHT: int = 8
+
+/// Esc: a lone ESC after the timeout, or an ESC followed by a byte that
+/// opens no sequence (an Alt-key: Esc, then the byte on its own).
+pub const KEY_ESC: int = 9
+
+/// Ctrl-C as a byte: interrupt (the signal path is the terminal's).
+pub const KEY_INTERRUPT: int = 10
+
+/// Enter (CR or LF).
+pub const KEY_ENTER: int = 11
+
+/// Backspace or Delete (0x7f or 0x08).
+pub const KEY_BACKSPACE: int = 12
+
+/// A printable byte `b` (32 to 126) is the key `KEY_CHAR_BASE + b`;
+/// `char_of` reads it back.
+pub const KEY_CHAR_BASE: int = 1000
+
+/// The milliseconds after which a lone ESC is Esc.
+pub const ESC_TIMEOUT_MS: int = 50
+
+/// The decoder: the bytes of an unfinished escape sequence and when the
+/// ESC that started it arrived; the bytes dropped and the forms ignored.
+pub struct Decoder {
+    pending: List[byte],
+    esc_at_ms: int,
+    dropped: int,
+    ignored: int,
+}
+
+/// A fresh decoder.
+pub fn new() -> Decoder {
+    Decoder { pending: List[byte](), esc_at_ms: 0, dropped: 0, ignored: 0 }
+}
+
+/// The character a character key carries, or -1 for a key that is none.
+pub fn char_of(k: int) -> int {
+    if k >= KEY_CHAR_BASE + 32 && k <= KEY_CHAR_BASE + 126 then k - KEY_CHAR_BASE else -1
+}
+
+/// The key of a printable byte (32 to 126), or `KEY_NONE`.
+pub fn char_key(b: int) -> int {
+    if b >= 32 && b <= 126 then KEY_CHAR_BASE + b else KEY_NONE
+}
+
+/// The key a plain (non-escape) byte means, or `KEY_NONE`.
+pub fn plain_key(b: int) -> int {
+    if b == 3 {
+        return KEY_INTERRUPT
+    }
+    if b == 13 || b == 10 {
+        return KEY_ENTER
+    }
+    if b == 127 || b == 8 {
+        return KEY_BACKSPACE
+    }
+    char_key(b)
+}
+
+/// The key an arrow final byte (`A`-`D`) means with modifier `m` (1 none,
+/// 2 Shift, …): the Shift form for 2, the bare arrow for any other
+/// modifier, or `KEY_NONE` for a byte that is no arrow.
+pub fn arrow_key(final: int, m: int) -> int {
+    let shift = m == 2
+    if final == 65 {
+        return if shift then KEY_SHIFT_UP else KEY_UP
+    }
+    if final == 66 {
+        return if shift then KEY_SHIFT_DOWN else KEY_DOWN
+    }
+    if final == 67 {
+        return if shift then KEY_SHIFT_RIGHT else KEY_RIGHT
+    }
+    if final == 68 {
+        return if shift then KEY_SHIFT_LEFT else KEY_LEFT
+    }
+    KEY_NONE
+}
+
+/// Decode a complete CSI sequence `ESC [ params final` held in `pending`
+/// (params as digits and `;`), pushing at most one key.
+fn finish_csi(mut d: Decoder, final: int, mut keys: List[int]) {
+    // Parameters: at most two matter here, `1 ; m` for a modified arrow.
+    var p0 = 0
+    var p1 = 0
+    var n = 0
+    var have = false
+    var i = 2
+    while i < d.pending.len - 1 {
+        let b = d.pending[i] as int
+        if b >= 48 && b <= 57 {
+            if n == 0 {
+                p0 = p0 * 10 + (b - 48)
+            } else if n == 1 {
+                p1 = p1 * 10 + (b - 48)
+            }
+            have = true
+        } else if b == 59 {
+            n += 1
+        }
+        i += 1
+    }
+    if final >= 65 && final <= 68 {
+        let m = if n >= 1 then p1 else 1
+        if have && n == 0 {
+            // `ESC [ n A` with a count: the bare arrow.
+        }
+        let k = arrow_key(final, m)
+        if k != KEY_NONE {
+            (mut keys).push(k)
+        }
+        return
+    }
+    // CSI-u (kitty), the tilde form and anything else: recognised, ignored.
+    d.ignored += 1
+}
+
+/// Feed one byte at `now_ms` (any monotonic millisecond count; it only
+/// times a lone ESC), pushing the keys it completes onto `keys`.
+///
+/// Written as a loop over at most two passes rather than a self-call. The
+/// release tier's mid-end (wolf 0.2.35) miscompiles pack's key path: the
+/// live loop saw every key as the quit key while the same binary's
+/// `--selftest` decoded the table right, and the first version of this
+/// function, which called itself after a stray byte following ESC,
+/// answered the quit key for every byte even in a probe. `tools/build`
+/// turns the mid-end off for the release tier (`WOLF_MIDEND=0`) until the
+/// wolf-lang issue named in pack's `notes/pk00-the-engine.md` is answered;
+/// the loop shape is kept because it needs no recursion.
+pub fn feed(mut d: Decoder, b: byte, now_ms: int, mut keys: List[int]) {
+    let v = b as int
+    var again = true
+    while again {
+        again = false
+        if d.pending.len == 0 {
+            if v == 27 {
+                (mut d.pending).push(b)
+                d.esc_at_ms = now_ms
+                return
+            }
+            let k = plain_key(v)
+            if k != KEY_NONE {
+                (mut keys).push(k)
+            } else {
+                d.dropped += 1
+            }
+            return
+        }
+        if d.pending.len == 1 {
+            // After ESC: `[` opens a CSI, `O` an SS3, another ESC restarts;
+            // anything else is Esc then the byte on its own (an Alt-key).
+            if v == 91 || v == 79 {
+                (mut d.pending).push(b)
+                return
+            }
+            (mut d.pending).reset()
+            if v == 27 {
+                (mut d.pending).push(b)
+                d.esc_at_ms = now_ms
+                return
+            }
+            (mut keys).push(KEY_ESC)
+            again = true
+            continue
+        }
+        if d.pending[1] as int == 79 {
+            // SS3: one final byte.
+            (mut d.pending).reset()
+            let k = arrow_key(v, 1)
+            if k != KEY_NONE {
+                (mut keys).push(k)
+            } else {
+                d.ignored += 1
+            }
+            return
+        }
+        // CSI: parameter bytes 0x30-0x3F, intermediates 0x20-0x2F, a final
+        // 0x40-0x7E.
+        if v >= 64 && v <= 126 {
+            (mut d.pending).push(b)
+            finish_csi(mut d, v, mut keys)
+            (mut d.pending).reset()
+            return
+        }
+        if v >= 32 && v <= 63 {
+            (mut d.pending).push(b)
+            if d.pending.len > 32 {
+                // Nothing a game reads is this long: drop it.
+                (mut d.pending).reset()
+                d.dropped += 1
+            }
+            return
+        }
+        // A C0 byte inside a sequence ends it; the byte is read on its own.
+        (mut d.pending).reset()
+        d.dropped += 1
+        again = true
+    }
+}
+
+/// Feed every byte of `bytes` at `now_ms`.
+pub fn feed_all(mut d: Decoder, bytes: List[byte], now_ms: int, mut keys: List[int]) {
+    for b in bytes {
+        feed(mut d, b, now_ms, mut keys)
+    }
+}
+
+/// Resolve a lone ESC: when the pending bytes are exactly one ESC and
+/// `ESC_TIMEOUT_MS` have passed since it arrived, it is Esc (`KEY_ESC`).
+/// Called once a tick with the clock's time; never guesses earlier.
+pub fn flush(mut d: Decoder, now_ms: int, mut keys: List[int]) {
+    if d.pending.len == 1 && now_ms - d.esc_at_ms >= ESC_TIMEOUT_MS {
+        (mut d.pending).reset()
+        (mut keys).push(KEY_ESC)
+    }
+}
+
+/// Whether a lone ESC is waiting on its timeout (the loop may shorten its
+/// wait to resolve it on time).
+pub fn esc_pending(d: Decoder) -> bool {
+    d.pending.len == 1
+}
+
+/// The millisecond at which a pending lone ESC resolves (meaningful only
+/// when `esc_pending`).
+pub fn esc_deadline_ms(d: Decoder) -> int {
+    d.esc_at_ms + ESC_TIMEOUT_MS
+}
+
+// The held-key model (pack's `docs/DESIGN.md`, the motion table).
+
+/// A lone press is held this long (400 ms, a keyboard's initial repeat
+/// delay): a tap is a readable swerve.
+pub const HOLD_TAP_TICKS: int = 12
+
+/// A gap between presses at most this long is the autorepeat rate; longer
+/// is the initial delay or a new tap.
+pub const HOLD_RATE_MAX: int = 5
+
+/// The hold outlives the last repeat by the measured interval plus this.
+pub const HOLD_MARGIN: int = 1
+
+/// A held key, from ticks alone (so a replay reproduces it): the ticks of
+/// the last two presses and the tick the hold ends.
+pub struct Hold {
+    last: int,
+    prev: int,
+    until: int,
+}
+
+/// No press yet.
+pub fn hold_new() -> Hold {
+    Hold { last: -1000, prev: -1000, until: -1 }
+}
+
+/// A press (the first byte or an autorepeat) at `tick`. A lone press holds
+/// `HOLD_TAP_TICKS`; a repeat holds the measured interval (the larger of
+/// the last two, since a 90 ms rate lands on alternating 2- and 3-tick
+/// gaps) plus the margin; the first repeat after the keyboard's initial
+/// delay holds `HOLD_RATE_MAX` plus the margin, the rate not yet known.
+pub fn hold_press(mut h: Hold, tick: int) {
+    let gap = tick - h.last
+    let prev_gap = h.last - h.prev
+    if gap <= HOLD_RATE_MAX {
+        var rate = gap
+        if prev_gap <= HOLD_RATE_MAX && prev_gap > rate {
+            rate = prev_gap
+        }
+        h.until = tick + rate + HOLD_MARGIN
+    } else if gap <= HOLD_TAP_TICKS + HOLD_MARGIN {
+        h.until = tick + HOLD_RATE_MAX + HOLD_MARGIN
+    } else {
+        h.until = tick + HOLD_TAP_TICKS
+    }
+    h.prev = h.last
+    h.last = tick
+}
+
+/// Whether the key is held at `tick`.
+pub fn held(h: Hold, tick: int) -> bool {
+    tick < h.until
+}
