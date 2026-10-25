@@ -54,7 +54,7 @@ compiler bundles) for the engine and for every game that pins it.
 
 ```
 tools/fetch-toolchain    stage the pinned toolchain into .wolf-bin/
-tools/check             fmt, 67 checked tests, both builds, PCM goldens, sound pty/cost rows, selftest
+tools/check             fmt, 68 checked tests, both builds, PCM goldens, sound pty/cost rows, selftest
 tools/build --release    target/release/lair
 ```
 
