@@ -1,0 +1,114 @@
+//! CLI preparation and evidence paths; no terminal mode is changed.
+
+use std.fs
+use std.time
+use grid
+
+/// Read and prepare a named file. All failures precede output or a child.
+pub fn load(path: str, seconds: int) -> Part ! {invalid} {
+    let text = fs.read_text(path) else |_| { eprint("sound: cannot_read: {path}"); return invalid }
+    prepare(path, text, seconds)
+}
+
+/// `--render PART SECONDS OUTPUT`: deterministic raw PCM or a WAV.
+pub fn render_file(path: str, seconds: int, output: str, wave: bool) -> int {
+    let p = load(path, seconds) else |_| { return 2 }
+    let bytes = if wave { wav(p.pcm) else |_| { return 2 } } else { copy p.pcm }
+    fs.write_bytes(output, bytes) else |_| { eprint("sound: cannot_write: {output}"); return 2 }
+    0
+}
+
+/// `--play PART`: bounded six-second audition, one exclusively created
+/// WAV in the current directory, removed after its child has been reaped.
+/// This path never changes the terminal's mode.
+pub fn play_file(path: str, backend: str) -> int {
+    let p = load(path, 6) else |_| { return 2 }
+    let output = "lair-play-{time.monotonic_ns()}.wav"
+    var file = fs.create_new(output) else |_| { eprint("sound: cannot_create: {output}"); return 2 }
+    let bytes = wav(p.pcm) else |_| {
+        fs.close(take file) else |_| {}
+        fs.remove(output) else |_| {}
+        return 2
+    }
+    fs.write_chunk(mut file, bytes) else |_| {
+        fs.close(take file) else |_| {}
+        fs.remove(output) else |_| {}
+        return 2
+    }
+    fs.close(take file) else |_| { fs.remove(output) else |_| {}; return 2 }
+    let result = output_file(backend, output)
+    fs.remove(output) else |_| { eprint("sound: cannot_remove: {output}") }
+    result
+}
+
+/// Exercise the output owner on a prepared WAV: refuse a second start
+/// while live, reap once, then finish again (an idempotent no-op).
+pub fn output_file(backend: str, path: str) -> int {
+    var o = silent()
+    let started = start(mut o, backend, path)
+    let second = start(mut o, backend, path)
+    let status = finish(mut o)
+    let again = finish(mut o)
+    print("sound-output started {started} second {second} status {status} again {again}")
+    if second || again != 0 { return 1 }
+    0
+}
+
+/// A deterministic cue replay, den then chase layered then den replaced.
+/// Used for byte comparisons on both tiers and hosts, never clocked.
+pub fn replay_file(den: str, chase: str, output: str) -> int {
+    var a = load(den, 4) else |_| { return 2 }
+    var b = load(chase, 4) else |_| { return 2 }
+    a.name = "den"
+    b.name = "chase"
+    var m = mixer([a, b]) else |_| { return 2 }
+    var all = List[byte]()
+    var t = 0
+    while t < 120 {
+        if t == 0 || t == 60 { let _ok = cue(mut m, "den") }
+        if t == 30 { let _ok = cue(mut m, "chase") }
+        for c in tick(mut m) { (mut all).push(c) }
+        t += 1
+    }
+    fs.write_bytes(output, all) else |_| { return 2 }
+    0
+}
+
+/// Benchmark the same grid render with and without four-layer sound.
+/// Preparation is excluded; cue and every tick are timed. The maximum
+/// audio tick is separately gated at one frame (33.3 ms).
+pub fn bench_file(path: str, enabled: bool) -> int {
+    var p = load(path, 4) else |_| { return 2 }
+    p.name = "cue"
+    p.layer = true
+    var m = mixer([p]) else |_| { return 2 }
+    var prev = grid.new(24, 80)
+    var sum = 0
+    var max = 0
+    var checksum = 0
+    var t = 0
+    while t < 90 {
+        let before = time.monotonic_ns()
+        if enabled {
+            if t < 4 { let _ok = cue(mut m, "cue") }
+            let pcm = tick(mut m)
+            checksum += pcm[100] as int
+        }
+        var next = grid.new(24, 80)
+        grid.put(mut next, 12, t % 80, grid.cell(87, 7, 0, 0))
+        var bytes = List[byte]()
+        var pen = grid.pen_new()
+        grid.diff(prev, next, false, mut pen, mut bytes, grid.COLORS_256)
+        checksum += bytes.len
+        prev = next
+        let elapsed = time.monotonic_ns() - before
+        sum += elapsed
+        if elapsed > max { max = elapsed }
+        t += 1
+    }
+    print(
+        "sound-frame enabled {enabled} avg_us {sum / 90 / 1000} max_us {max / 1000} checksum {checksum}",
+    )
+    if sum / 90 > 1000000 || max > 33333333 { return 1 }
+    0
+}

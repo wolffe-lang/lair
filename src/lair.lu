@@ -10,6 +10,7 @@
 use headless
 use input
 use replay
+use sound
 use std.env
 use std.fs
 
@@ -18,6 +19,11 @@ fn usage_text() -> str {
         "  lair --selftest                   the decoder table (whole and split at every byte) and\n" +
         "                                    the diff property, on THIS binary\n" +
         "  lair --apply CAPTURE --size WxH   a captured byte stream as a frame, through the terminal model\n" +
+        "  lair --play PART                 hear six seconds (temporary WAV, reaped child)\n" +
+        "  lair --render PART SECONDS OUT   raw stereo S16_LE PCM (0..30 seconds)\n" +
+        "  lair --wav PART SECONDS OUT      the same PCM in a WAV\n" +
+        "  lair --sound-replay DEN CHASE OUT  deterministic cue replay\n" +
+        "  lair --sound-bench PART on|off   render and mixing cost\n" +
         "  lair --version\n"
 }
 
@@ -132,6 +138,26 @@ fn run_apply(path: str, size: str) -> int {
 
 fn main() -> int {
     let args = env.args()
+    if args.len == 4 && (args[0] == "--render" || args[0] == "--wav") {
+        let seconds = args[2].to_int() else -1
+        return sound.render_file(args[1], seconds, args[3], args[0] == "--wav")
+    }
+    if args.len == 4 && args[0] == "--sound-replay" {
+        return sound.replay_file(args[1], args[2], args[3])
+    }
+    if args.len == 3 && args[0] == "--sound-output" {
+        return sound.output_file(args[1], args[2])
+    }
+    if args.len == 3 && args[0] == "--sound-loop" {
+        return sound.live_file(args[1], args[2] == "on")
+    }
+    if args.len == 3 && args[0] == "--sound-bench" {
+        return sound.bench_file(args[1], args[2] == "on")
+    }
+    if args.len == 2 && args[0] == "--play" {
+        let backend = if fs.exists("/usr/bin/afplay") { "macos" } else { "linux" }
+        return sound.play_file(args[1], backend)
+    }
     var apply_path = ""
     var size = ""
     var i = 0

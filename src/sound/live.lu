@@ -1,0 +1,59 @@
+//! The engine's own terminal witness: one clock wait per tick, with the
+//! exact cue/tick API a game uses. No audible output in this test path.
+
+use clock
+use term
+use std.signal
+
+/// A bounded 15-second terminal witness. Every return after entry leaves
+/// the terminal; q and a typed Ctrl-C end early. Keys are acknowledged
+/// only after the frame and its sound tick, so latency cannot be vacuous.
+pub fn live_file(path: str, enabled: bool) -> int {
+    var p = load(path, 4) else |_| { return 2 }
+    p.name = "cue"
+    p.layer = true
+    var m = mixer([p]) else |_| { return 2 }
+    var terminal = term.open() else |_| { return 2 }
+    term.enter(mut terminal) else |_| { term.leave(mut terminal); return 2 }
+    var c = clock.new(clock.now_ns())
+    var key = false
+    var read_ns = 0
+    var quit = false
+    var checksum = 0
+    while c.ticks < 450 && !quit {
+        let wake = clock.wait_until(mut c, clock.next_due_ns(c), term.signal_set()) else |_| {
+            quit = true
+            continue
+        }
+        if wake.meaning &
+            (signal.interrupt() | signal.terminate() | signal.quit() | signal.reload()) !=
+            0 {
+            quit = true
+        }
+        if wake.input_ready {
+            let bytes = term.read_keys(256) else |_| { quit = true; List[byte]() }
+            for b in bytes {
+                if b == 113 as byte { quit = true } else { key = true; read_ns = clock.now_ns() }
+            }
+        }
+        let due = clock.advance(mut c, clock.now_ns())
+        if due > 0 && !quit {
+            if enabled {
+                if c.ticks % 90 < 4 { let _ok = cue(mut m, "cue") }
+                let pcm = tick(mut m)
+                checksum += pcm[100] as int
+            }
+            var bytes = List[byte]()
+            for b in "\x1b[1;1Hsound {c.ticks} {checksum} ".bytes() { (mut bytes).push(b) }
+            term.write(bytes) else |_| { quit = true }
+            if key {
+                eprint(
+                    "trace frame {c.ticks} carries_key inner_us {(clock.now_ns() - read_ns) / 1000}",
+                )
+                key = false
+            }
+        }
+    }
+    term.leave(mut terminal)
+    0
+}

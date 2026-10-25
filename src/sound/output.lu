@@ -1,0 +1,107 @@
+//! Output adapters do not belong in tick. A child belongs to its Output
+//! until finish consumes it; the command is argv, never shell text.
+
+use std.process
+
+fn le32(mut b: List[byte], n: int) {
+    (mut b).push((n & 255) as byte)
+    (mut b).push((n >> 8 & 255) as byte)
+    (mut b).push((n >> 16 & 255) as byte)
+    (mut b).push((n >> 24 & 255) as byte)
+}
+
+fn tag(mut b: List[byte], s: str) {
+    for c in s.bytes() { (mut b).push(c) }
+}
+
+/// Canonical 44-byte PCM WAV header, followed by stereo S16_LE frames.
+/// Refuses incomplete frames and files larger than the preparation cap.
+pub fn wav(pcm: List[byte]) -> List[byte] ! {invalid} {
+    if pcm.len % 4 != 0 || pcm.len > RATE * 4 * 30 { return invalid }
+    var b = List[byte]()
+    tag(mut b, "RIFF")
+    le32(mut b, 36 + pcm.len)
+    tag(mut b, "WAVEfmt ")
+    le32(mut b, 16)
+    pcm16(mut b, 1)
+    pcm16(mut b, 2)
+    le32(mut b, RATE)
+    le32(mut b, RATE * 4)
+    pcm16(mut b, 4)
+    pcm16(mut b, 16)
+    tag(mut b, "data")
+    le32(mut b, pcm.len)
+    for c in pcm { (mut b).push(c) }
+    b
+}
+
+/// Stub-testable OSS negotiation: the three requests and their values,
+/// in play's order. No device is opened by the portable engine.
+pub fn oss_requests() -> List[int] {
+    [0xc0045005, 0x10, 0xc0045006, 2, 0xc0045002, RATE]
+}
+
+/// Whether the OSS answers preserve the fixed PCM contract. Unlike play,
+/// lair cannot silently vary rate/channels: replay bytes are the oracle.
+pub fn oss_answers(format: int, channels: int, rate: int) -> bool {
+    format == 0x10 && channels == 2 && rate == RATE
+}
+
+/// One output owner. Reap with finish after the game leaves its frame
+/// loop; never discard a live Output. Silence is a non-error state.
+pub struct Output {
+    child: process.Child,
+    live: bool,
+    refused: bool,
+}
+
+/// A silent adapter, with its first refusal still unreported.
+pub fn silent() -> Output {
+    Output { child: process.Child { slot: -1 }, live: false, refused: false }
+}
+
+fn refuse_once(mut o: Output, why: str) {
+    if !o.refused { eprint("sound: silent: {why}"); o.refused = true }
+}
+
+/// Start a PREWRITTEN WAV asynchronously. `macos` selects /usr/bin/afplay;
+/// `linux` selects paplay; `oss` is a named refusal until wolf-std grows
+/// ioctl. A missing player logs once and leaves the game running. This
+/// loading/output operation is deliberately not called by cue or tick.
+pub fn start(mut o: Output, backend: str, path: str) -> bool {
+    if o.live { return false }
+    if backend == "oss" {
+        refuse_once(mut o, "oss_ioctl_unsupported: wolf-std has no OSS ioctl adapter")
+        return false
+    }
+    var program = ""
+    if backend == "macos" {
+        program = "/usr/bin/afplay"
+    } else if backend == "linux" {
+        program = "paplay"
+    } else {
+        refuse_once(mut o, "unknown_output")
+        return false
+    }
+    var cmd = process.command(program)
+    process.push_arg(mut cmd, path)
+    let child = process.start(cmd) else |_| {
+        refuse_once(mut o, "player_missing: {program}")
+        return false
+    }
+    o.child = child
+    o.live = true
+    true
+}
+
+/// Reap exactly the child this output started. Call outside the frame
+/// loop, including failed playback. Does not touch any other child.
+pub fn finish(mut o: Output) -> int {
+    if !o.live { return 0 }
+    o.live = false
+    let child = o.child
+    o.child = process.Child { slot: -1 }
+    let status = process.wait(take child) else |_| { -1 }
+    if status != 0 { refuse_once(mut o, "player_failed: {status}") }
+    status
+}

@@ -1,0 +1,160 @@
+//! A cue bank is prepared before a game enters its live loop. Tick mixes
+//! at most four cached PCM streams; no filesystem, process or clock call.
+
+/// One named, prepared cue. `layer` adds rather than replaces; the fade
+/// is in 30 Hz ticks. PCM is always stereo S16_LE at RATE.
+pub struct Part {
+    name: str,
+    pcm: List[byte],
+    layer: bool,
+    fade: int,
+}
+
+/// Prepare an original part, including its optional `cue replace|layer
+/// fade N` header (N 1..30 ticks). This is loading work, not frame work.
+pub fn prepare(name: str, text: str, seconds: int) -> Part ! {invalid} {
+    var body = ""
+    var layer = false
+    var fade = 3
+    var seen = false
+    for line in text.lines() {
+        let ws = words(line)
+        if ws.len > 0 && ws[0] == "cue" {
+            if seen || ws.len != 4 || ws[2] != "fade" {
+                return invalid
+            }
+            if ws[1] != "replace" && ws[1] != "layer" {
+                return invalid
+            }
+            layer = ws[1] == "layer"
+            fade = number(ws[3])
+            if fade < 1 || fade > 30 {
+                return invalid
+            }
+            seen = true
+        } else {
+            body = body + line + "\n"
+        }
+    }
+    let score = read(body)
+    if score.err != "" {
+        eprint("sound: {name}: {score.err}")
+        return invalid
+    }
+    Part { name: copy name, pcm: render(score, seconds)?, layer: layer, fade: fade }
+}
+
+/// Four bounded slots. A negative part index is inactive. Positions and
+/// fades are measured in sample frames, independent of clock and tier.
+pub struct Mixer {
+    bank: List[Part],
+    which: List[int],
+    position: List[int],
+    level: List[int],
+    leaving: List[bool],
+}
+
+/// Load at most sixteen cues (at most 30 seconds each); no audio starts.
+/// Duplicate names or malformed PCM refuse the bank before game entry.
+pub fn mixer(bank: List[Part]) -> Mixer ! {invalid} {
+    if bank.len > 16 { return invalid }
+    var i = 0
+    while i < bank.len {
+        if bank[i].name == "" ||
+            bank[i].pcm.len % FRAME_BYTES != 0 ||
+            bank[i].pcm.len > RATE * FRAME_BYTES * 30 ||
+            bank[i].fade < 1 ||
+            bank[i].fade > 30 {
+            return invalid
+        }
+        var j = 0
+        while j < i {
+            if bank[j].name == bank[i].name { return invalid }
+            j += 1
+        }
+        i += 1
+    }
+    Mixer {
+        bank: copy bank,
+        which: [-1, -1, -1, -1],
+        position: [0, 0, 0, 0],
+        level: [0, 0, 0, 0],
+        leaving: [false, false, false, false],
+    }
+}
+
+/// Start a named cue on the next tick. False means unknown or all four
+/// slots occupied; neither refusal changes the current music. Replacing
+/// fades old slots out while the new slot fades in. No I/O, no render.
+pub fn cue(mut m: Mixer, name: str) -> bool {
+    var part = -1
+    var i = 0
+    while i < m.bank.len {
+        if m.bank[i].name == name { part = i }
+        i += 1
+    }
+    if part < 0 { return false }
+    var free = -1
+    i = 0
+    while i < 4 {
+        if m.which[i] < 0 && free < 0 { free = i }
+        i += 1
+    }
+    if free < 0 { return false }
+    if !m.bank[part].layer {
+        i = 0
+        while i < 4 {
+            if m.which[i] >= 0 { m.leaving[i] = true }
+            i += 1
+        }
+    }
+    m.which[free] = part
+    m.position[free] = 0
+    m.level[free] = 0
+    m.leaving[free] = false
+    true
+}
+
+fn signed16(pcm: List[byte], at: int) -> int {
+    let n = pcm[at] as int + pcm[at + 1] as int * 256
+    if n >= 32768 { n - 65536 } else { n }
+}
+
+/// Exactly one 30 Hz tick of mixed PCM. A fixed quarter-scale per stream
+/// leaves headroom for four layers. Fade and end-of-part are sample based.
+pub fn tick(mut m: Mixer) -> List[byte] {
+    var out = List[byte]()
+    var f = 0
+    while f < TICK_FRAMES {
+        var l = 0
+        var r = 0
+        var s = 0
+        while s < 4 {
+            let p = m.which[s]
+            if p >= 0 {
+                let at = m.position[s] * FRAME_BYTES
+                let end = m.bank[p].pcm.len / FRAME_BYTES
+                let fade = m.bank[p].fade * TICK_FRAMES
+                if at >= m.bank[p].pcm.len || m.leaving[s] && m.level[s] <= 0 {
+                    m.which[s] = -1
+                } else {
+                    if end - m.position[s] <= fade { m.leaving[s] = true }
+                    if m.leaving[s] {
+                        m.level[s] -= 1
+                    } else if m.level[s] < fade {
+                        m.level[s] += 1
+                    }
+                    let gain = if m.level[s] < 0 { 0 } else { m.level[s] }
+                    l += signed16(m.bank[p].pcm, at) * gain / fade / 4
+                    r += signed16(m.bank[p].pcm, at + 2) * gain / fade / 4
+                    m.position[s] += 1
+                }
+            }
+            s += 1
+        }
+        pcm16(mut out, l)
+        pcm16(mut out, r)
+        f += 1
+    }
+    out
+}

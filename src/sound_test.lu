@@ -1,0 +1,124 @@
+use sound
+
+fn test_sound_reader_timbres() {
+    let timbres = [
+        "strings",
+        "horn",
+        "trumpet",
+        "trombone",
+        "clarinet",
+        "oboe",
+        "flute",
+        "organ",
+        "pedal",
+        "choir",
+        "voice",
+        "harp",
+        "timpani",
+        "bells",
+        "tamtam",
+        "cymbal",
+        "drum",
+        "brass",
+        "woodwind",
+    ]
+    for t in timbres {
+        let p = sound.read("tempo 120\npart a {t}\nbar 1\na C4/1\n")
+        assert(p.err == "", "valid part")
+        assert(p.names.len == 1, "equal")
+        assert(p.total == 2000000, "equal")
+    }
+}
+
+fn test_sound_reader_named_refusals() {
+    let bad = sound.read("tempo 120\npart a fiddle\nbar 1\na C4/1\n")
+    assert(bad.err.contains("fiddle"), "named timbre")
+    let short = sound.read("tempo 120\npart a horn\nbar 1\na C4/4\n")
+    assert(short.err.contains("short"), "short bar")
+}
+
+fn test_sound_zero_render() {
+    let p = sound.read("tempo 120\npart a horn\nbar 1\na C4/1\n")
+    let pcm = sound.render(p, 0) else |_| { assert(false, "render refused"); List[byte]() }
+    assert(pcm.len == 0, "equal")
+}
+
+fn short_pcm() -> List[byte] {
+    var b = List[byte]()
+    var i = 0
+    while i < 6400 * 4 {
+        (mut b).push((if i % 2 == 0 { 0 } else { 16 }) as byte)
+        i += 1
+    }
+    b
+}
+
+fn test_sound_wav_and_oss() {
+    let w = sound.wav([1 as byte, 2 as byte, 3 as byte, 4 as byte]) else |_| { List[byte]() }
+    assert(w.len == 48, "WAV length")
+    assert(w[0] == 82 as byte && w[8] == 87 as byte && w[22] == 2 as byte, "RIFF WAVE stereo")
+    assert(w[24] == 128 as byte && w[25] == 187 as byte && w[34] == 16 as byte, "48000 S16")
+    assert(w[40] == 4 as byte && w[44] == 1 as byte && w[47] == 4 as byte, "payload")
+    let req = sound.oss_requests()
+    let want = [0xc0045005, 16, 0xc0045006, 2, 0xc0045002, 48000]
+    var i = 0
+    while i < 6 { assert(req[i] == want[i], "OSS request order"); i += 1 }
+    assert(sound.oss_answers(16, 2, 48000), "fixed format")
+    assert(
+        !sound.oss_answers(8, 2, 48000) &&
+            !sound.oss_answers(16, 1, 48000) &&
+            !sound.oss_answers(16, 2, 44100),
+        "refuse negotiated drift",
+    )
+}
+
+fn test_sound_cues_replay_fades_and_capacity() {
+    let a = sound.Part { name: "den", pcm: short_pcm(), layer: false, fade: 1 }
+    let b = sound.Part { name: "leap", pcm: short_pcm(), layer: true, fade: 1 }
+    var m = sound.mixer([copy a, copy b]) else |_| {
+        assert(false, "bank")
+        sound.Mixer { bank: [], which: [], position: [], level: [], leaving: [] }
+    }
+    assert(!sound.cue(mut m, "missing"), "unknown cue")
+    assert(sound.cue(mut m, "den"), "first")
+    let first = sound.tick(mut m)
+    assert(first.len == 6400, "one tick")
+    assert(first[0] == 0 as byte && first[1] == 0 as byte, "fade starts quiet")
+    let full = sound.tick(mut m)
+    assert(full[0] == 0 as byte && full[1] == 4 as byte, "quarter-scale headroom")
+    assert(sound.cue(mut m, "leap"), "layer")
+    assert(!m.leaving[0], "layer preserves old")
+    let _both = sound.tick(mut m)
+    assert(sound.cue(mut m, "den"), "replace")
+    assert(m.leaving[0] && m.leaving[1], "replace fades previous streams")
+    let _fade = sound.tick(mut m)
+    let _end = sound.tick(mut m)
+    assert(m.which[0] == -1 && m.which[1] == -1, "retired slots")
+    var n = sound.mixer([copy a, copy b]) else |_| { assert(false, "bank"); m }
+    assert(
+        sound.cue(mut n, "leap") &&
+            sound.cue(mut n, "leap") &&
+            sound.cue(mut n, "leap") &&
+            sound.cue(mut n, "leap"),
+        "four layers",
+    )
+    assert(!sound.cue(mut n, "den"), "capacity refusal")
+    assert(!n.leaving[0], "refusal atomic")
+}
+
+fn test_sound_parse_features_and_bounds() {
+    let p = sound.read(
+        "tempo 120\nmeter 4/4\npart a horn pp pan -30 gain -3\nbar 1\na < C4,E4/2~ C4,G4/2 ff\nbar 2 tempo 100\na C4/4. D4/8 E4/2-\n",
+    )
+    assert(p.err == "" && p.n_hz.len == 6, "chords partial tie dynamics tempo dots")
+    assert(
+        sound.read("tempo 120\npart a horn\nbar 1\na C4/1~\n").err.contains("ties past"),
+        "dangling tie",
+    )
+    assert(
+        sound.read("tempo 120\npart a horn\nbar 1\na < C4/1\n").err.contains("hairpin"),
+        "dangling hairpin",
+    )
+    let r = sound.render(p, 31) else |_| { List[byte]() }
+    assert(r.len == 0, "bounded render")
+}
