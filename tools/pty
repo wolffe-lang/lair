@@ -393,8 +393,8 @@ def main():
             for p in problems:
                 print("  - " + p)
         else:
-            extra = ("; " + s.evidence) if getattr(s, "evidence", None) else ""
-            print("pty: %s ok (%s %s, exit %d, %d bytes captured%s)" % (name, sys.platform, os.uname().machine, s.status, len(s.out), extra))
+            note = ("; " + s.evidence) if getattr(s, "evidence", None) else ""
+            print("pty: %s ok (%s %s, exit %d, %d bytes captured%s)" % (name, sys.platform, os.uname().machine, s.status, len(s.out), note))
     return 1 if failed else 0
 
 
