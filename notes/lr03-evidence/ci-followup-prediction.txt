@@ -1,0 +1,9 @@
+Prediction before the CI follow-up fix:
+The macOS CI startup=5 is exactly the first two stand-in reply chunks,
+x ESC [ ? 0. The final u y arrives after the engine's 150 ms deadline:
+the same failure contains y's decoded event after fallback. The harness
+pumps/sleeps after each partial write, leaving its reply unfinished while
+both parent and child can be rescheduled. A controlled parent delay after
+the second chunk should reproduce exact=false startup=5 with a late final
+write, while the same reply without that delay negotiates. Fix the stand-in
+terminal's response scheduling, not the assertion or the production timeout.
