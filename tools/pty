@@ -97,7 +97,7 @@ class Session:
     `stty -a` on the slave for the record) and the game's exit status on a
     pipe. Nothing here traps, masks or sends a signal."""
 
-    def __init__(self, argv, rows, cols, env):
+    def __init__(self, argv, rows, cols, env, settle=0.3):
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         r_rep, w_rep = os.pipe()
@@ -135,7 +135,7 @@ class Session:
         self.out = b""
         self.err = b""
         self.eof = False
-        self.pump(0.3)
+        self.pump(settle)
         self.job = int(os.read(r_pid, 32).strip() or b"0")
         os.close(r_pid)
 

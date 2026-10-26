@@ -13,6 +13,7 @@ use replay
 use sound
 use std.env
 use std.fs
+use term
 
 fn usage_text() -> str {
     "lair — the wolf games' engine\n\n" +
@@ -138,6 +139,7 @@ fn run_apply(path: str, size: str) -> int {
 
 fn main() -> int {
     let args = env.args()
+    if args.len == 2 && args[0] == "--input-loop" { return term.witness(args[1]) }
     if args.len == 4 && (args[0] == "--render" || args[0] == "--wav") {
         let seconds = args[2].to_int() else -1
         return sound.render_file(args[1], seconds, args[3], args[0] == "--wav")

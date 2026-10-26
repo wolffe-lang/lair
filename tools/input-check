@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Exercise the actual engine's keyboard lifecycle in a real pseudo-terminal."""
+import importlib.machinery
+import importlib.util
+import os
+from pathlib import Path
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parent.parent
+loader = importlib.machinery.SourceFileLoader("input_pty", str(ROOT / "tools/pty"))
+pty = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+loader.exec_module(pty)
+QUERY, PUSH, POP = b"\x1b[?u", b"\x1b[>11u", b"\x1b[<u"
+
+
+def row(binary, mode, reply=True):
+    s = pty.Session([str(binary), "--input-loop", mode], 24, 80, pty.env_for(), settle=.01)
+    start = time.monotonic()
+    if mode != "legacy":
+        while QUERY not in s.out and time.monotonic() - start < 2:
+            s.pump(.005)
+        assert QUERY in s.out, "support query missing"
+        if reply:
+            # Preserve unrelated startup input and split the answer itself.
+            for part in (b"x\x1b[", b"?0", b"uy"):
+                s.type(part, settle=.005)
+        while b"input-ready" not in s.err and time.monotonic() - start < 2:
+            s.pump(.005)
+        assert b"input-ready" in s.err, s.err
+        if reply:
+            assert b"exact=true startup=2" in s.err, s.err
+        else:
+            assert b"exact=false startup=0" in s.err, s.err
+            assert time.monotonic() - start < .8, "unsupported terminal stalled"
+    if mode in ("normal", "ctrl-c"):
+        s.type(b"\x03" if mode == "ctrl-c" else b"q")
+    s.finish(timeout=5)
+    problems = []
+    pty.common_checks(s, 134 if mode == "crash" else 2 if mode == "error" else 0, problems)
+    assert not problems, problems
+    if mode != "legacy" and reply:
+        assert s.out.count(PUSH) == 1 and s.out.count(POP) == 1, (mode, s.out)
+        assert s.out.index(pty.ENTER_ALT) < s.out.index(PUSH) < s.out.index(POP) < s.out.index(pty.LEAVE_ALT)
+    else:
+        assert PUSH not in s.out and POP not in s.out, "unsupported/legacy path changed flags"
+    print("input-pty %s/%s %s ok" % (binary.parent.name, mode, "kitty" if reply else "fallback"), flush=True)
+
+
+def main():
+    if not pty.mac_memory_ok():
+        return 3
+    for tier in ("native", "release"):
+        binary = ROOT / "target" / tier / "lair"
+        for mode in ("normal", "ctrl-c", "crash", "error"):
+            row(binary, mode)
+        row(binary, "normal", reply=False)
+        row(binary, "legacy", reply=False)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

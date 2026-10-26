@@ -1,0 +1,31 @@
+use term
+
+fn test_query_answer_preserves_input_at_every_split() {
+    let text = "a\x1b[?11ub"
+    var split = 0
+    while split <= text.len {
+        var pending = List[byte]()
+        var answered = false
+        var i = 0
+        while i < text.len {
+            (mut pending).push(text.bytes()[i])
+            if i + 1 == split { answered = term.take_answer(mut pending) }
+            i += 1
+        }
+        if !answered { answered = term.take_answer(mut pending) }
+        assert(answered, "answer at split {split}")
+        assert(
+            pending.len == 2 && pending[0] as int == 97 && pending[1] as int == 98,
+            "startup keys retained at split {split}",
+        )
+        split += 1
+    }
+}
+
+fn test_query_ignores_malformed_and_partial_answers() {
+    for text in ["\x1b[?u", "\x1b[?11", "\x1b[?999999999999999999999u", "\x1b[11u", "\x1b[?1;2u"] {
+        var pending = List[byte]()
+        for b in text.bytes() { (mut pending).push(b) }
+        assert(!term.take_answer(mut pending) && pending.len == text.len, "not an answer: {text}")
+    }
+}

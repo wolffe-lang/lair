@@ -26,6 +26,7 @@
 //! minimum (R-PK-6: 80 by 24; the field scales up, never down), `io` for
 //! a terminal that refuses its mode. `message` gives each its sentence.
 
+use clock
 use std.env
 use std.fs
 use std.io as std_io
@@ -217,4 +218,136 @@ pub fn write(bytes: List[byte]) -> () ! {io} {
 pub fn read_keys(max: int) -> List[byte] ! ReadErrors {
     var tin = fs.stdin()
     fs.read_chunk(mut tin, max)?
+}
+
+/// Bounded support query: unsupported terminals never stall startup.
+pub const QUERY_TIMEOUT_MS: int = 150
+
+/// An opt-in keyboard session. Keep Term's layout for older games.
+pub struct Session {
+    terminal: Term,
+    keyboard: bool,
+    startup: List[byte],
+}
+
+/// Support query and the exact enhancements required for key-up events.
+pub fn query_bytes() -> str { "\x1b[?u" }
+
+/// Push exactly disambiguation, event types and all keys.
+pub fn push_bytes() -> str { "\x1b[>11u" }
+
+/// Restore the previous keyboard flags on the current screen.
+pub fn pop_bytes() -> str { "\x1b[<u" }
+
+fn byte_list(s: str) -> List[byte] {
+    var out = List[byte]()
+    for b in s.bytes() { (mut out).push(b) }
+    out
+}
+
+/// Remove one complete support answer, preserving all surrounding input.
+/// Only decimal flags are accepted, bounded before multiplication.
+pub fn take_answer(mut bytes: List[byte]) -> bool {
+    var start = 0
+    while start + 4 < bytes.len {
+        if bytes[start] as int == 27 &&
+            bytes[start + 1] as int == 91 &&
+            bytes[start + 2] as int == 63 {
+            var i = start + 3
+            var digits = 0
+            while i < bytes.len && bytes[i] as int >= 48 && bytes[i] as int <= 57 && digits < 9 {
+                i += 1
+                digits += 1
+            }
+            if digits > 0 && i < bytes.len && bytes[i] as int == 117 {
+                var keep = List[byte]()
+                var n = 0
+                while n < bytes.len {
+                    if n < start || n > i { (mut keep).push(bytes[n]) }
+                    n += 1
+                }
+                bytes = keep
+                return true
+            }
+        }
+        start += 1
+    }
+    false
+}
+
+fn negotiate(mut s: Session) -> () ! {io} {
+    write(byte_list(query_bytes()))?
+    let deadline = clock.now_ns() + QUERY_TIMEOUT_MS * 1000000
+    var timer = clock.new(clock.now_ns())
+    while clock.now_ns() < deadline && s.startup.len < 4096 {
+        let wake = clock.wait_until(mut timer, deadline, signal_set())?
+        if wake.meaning &
+            (signal.interrupt() | signal.terminate() | signal.reload() | signal.quit()) !=
+            0 {
+            return io
+        }
+        if wake.input_ready {
+            let bytes = read_keys(256) else |_| { return io }
+            for b in bytes { (mut s.startup).push(b) }
+            if take_answer(mut s.startup) {
+                // The alternate screen has its own protocol stack. The pop
+                // must run BEFORE leaving it, even when the runtime traps.
+                std_term.restore_at_exit(
+                    fs.stdout(),
+                    s.terminal.saved,
+                    byte_list(pop_bytes() + leave_bytes()),
+                ) else |_| { return io }
+                s.keyboard = true
+                write(byte_list(push_bytes()))?
+                return
+            }
+        }
+    }
+}
+
+/// Open, enter and negotiate. Existing open/enter users remain legacy-only.
+pub fn open_input() -> Session ! OpenErrors {
+    var terminal = open()?
+    enter(mut terminal) else |_| { leave(mut terminal); return io }
+    var s = Session { terminal: terminal, keyboard: false, startup: List[byte]() }
+    negotiate(mut s) else |_| { close_input(mut s); return io }
+    s
+}
+
+/// Idempotent normal/error cleanup; runtime registration covers crash/exit.
+pub fn close_input(mut s: Session) {
+    if s.keyboard {
+        write(byte_list(pop_bytes())) else |_| {}
+        s.keyboard = false
+    }
+    leave(mut s.terminal)
+}
+
+/// A bounded real-terminal witness used by tools/input-check.
+pub fn witness(mode: str) -> int {
+    if mode == "legacy" {
+        var t = open() else |_| { return 2 }
+        enter(mut t) else |_| { leave(mut t); return 2 }
+        leave(mut t)
+        return 0
+    }
+    var s = open_input() else |_| { return 2 }
+    eprint("input-ready exact={s.keyboard} startup={s.startup.len}")
+    if mode == "crash" { assert(false, "input crash witness") }
+    if mode == "error" { close_input(mut s); return 2 }
+    var timer = clock.new(clock.now_ns())
+    let deadline = clock.now_ns() + 2000000000
+    while clock.now_ns() < deadline {
+        let wake = clock.wait_until(mut timer, deadline, signal_set()) else |_| { break }
+        if wake.meaning & signal.interrupt() != 0 { break }
+        if wake.input_ready {
+            let bytes = read_keys(256) else |_| { break }
+            var quit = false
+            for b in bytes { if b as int == 113 { quit = true } }
+            if quit { break }
+        }
+    }
+    close_input(mut s)
+    close_input(mut s)
+    0
 }
