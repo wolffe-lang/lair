@@ -1,0 +1,201 @@
+in-container: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+check-fmt: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+check-fmt: canonical
+test: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+test src/art_test.lu::test_wolf_body_bar_and_four_separated_leg_columns ... ok
+test src/art_test.lu::test_four_contact_frames_move_diagonal_pairs_without_hiding_feet ... ok
+test src/art_test.lu::test_oriented_sprite_envelope_matches_collision_cell ... ok
+test src/art_test.lu::test_floor_is_visible_soil_with_seeded_rocks_on_both_tiers ... ok
+test src/art_test.lu::test_frame_plain_footprints_meat_and_leader ... ok
+test src/art_test.lu::test_south_is_generated_vertical_mirror_of_north ... ok
+test src/art_test.lu::test_top_down_legs_both_sides_and_head_front ... ok
+test src/art_test.lu::test_eagle_supplied_wings_and_flap_distance ... ok
+test src/art_test.lu::test_top_down_north_is_the_supplied_sheet ... ok
+test src/clock/clock_test.lu::test_no_tick_before_its_time ... ok
+test src/clock/clock_test.lu::test_one_tick_on_time ... ok
+test src/clock/clock_test.lu::test_late_frames_drop_renders_not_ticks ... ok
+test src/clock/clock_test.lu::test_ms_until_rounds_up ... ok
+test src/clock/clock_test.lu::test_thirty_ticks_a_second ... ok
+test src/grid/grid_test.lu::test_empty_diff_writes_nothing ... ok
+test src/grid/grid_test.lu::test_one_cell_diff ... ok
+test src/grid/grid_test.lu::test_full_repaint_is_contiguous ... ok
+test src/grid/grid_test.lu::test_style_run_sets_sgr_once ... ok
+test src/grid/grid_test.lu::test_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_sixteen_dialect_bright ... ok
+test src/grid/grid_test.lu::test_utf8_lengths ... ok
+test src/grid/grid_test.lu::test_property_apply_diff_equals_next ... ok
+test src/grid/grid_test.lu::test_property_holds_in_the_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_model_wraps_and_scrolls ... ok
+test src/grid/grid_test.lu::test_model_private_modes ... ok
+test src/grid/grid_test.lu::test_model_malformed_utf8 ... ok
+test src/grid/grid_test.lu::test_dump_text_and_styles ... ok
+test src/grid/grid_test.lu::test_plain_ok ... ok
+test src/grid/grid_test.lu::test_bounds_are_soft ... ok
+test src/input/input_test.lu::test_csi_arrows ... ok
+test src/input/input_test.lu::test_ss3_arrows ... ok
+test src/input/input_test.lu::test_shift_arrows_are_their_own_keys ... ok
+test src/input/input_test.lu::test_other_modifiers_are_the_bare_arrow ... ok
+test src/input/input_test.lu::test_plain_keys ... ok
+test src/input/input_test.lu::test_lone_esc_waits_for_the_timeout ... ok
+test src/input/input_test.lu::test_esc_then_bracket_late_is_still_a_sequence ... ok
+test src/input/input_test.lu::test_esc_then_plain_byte_is_esc_and_the_byte ... ok
+test src/input/input_test.lu::test_ignored_forms ... ok
+test src/input/input_test.lu::test_unknown_bytes_are_dropped_and_counted ... ok
+test src/input/input_test.lu::test_two_sequences_in_one_read ... ok
+test src/input/input_test.lu::test_a_tap_holds_for_the_tap_ticks ... ok
+test src/input/input_test.lu::test_a_repeat_run_releases_one_interval_after_the_last_press ... ok
+test src/input/input_test.lu::test_kitty_printable_low_matrix ... ok
+test src/input/input_test.lu::test_kitty_printable_high_matrix ... ok
+test src/input/input_test.lu::test_kitty_special_matrix ... ok
+test src/input/input_test.lu::test_kitty_functional_matrix ... ok
+test src/input/input_test.lu::test_kitty_defaults_optional_fields_and_refusals ... ok
+test src/input/input_test.lu::test_exact_down_resumes_after_left_tap ... ok
+test src/input/input_test.lu::test_exact_diagonal_and_ctrl_across_arrows ... ok
+test src/input/input_test.lu::test_registered_key_and_inferred_equivalence ... ok
+test src/replay/replay_test.lu::test_vocabulary ... ok
+test src/replay/replay_test.lu::test_parse_sample ... ok
+test src/replay/replay_test.lu::test_round_trip ... ok
+test src/replay/replay_test.lu::test_refusals ... ok
+test src/replay/replay_test.lu::test_parse_size ... ok
+test src/replay/replay_test.lu::test_start_is_read_written_and_defaults_to_zero ... ok
+test src/replay/replay_test.lu::test_the_score_comment_is_written_read_and_optional ... ok
+test src/sim_test.lu::test_wrap_all_four_edges_both_axes ... ok
+test src/sim_test.lu::test_reverse_refused_and_fast_double_turn_refused ... ok
+test src/sim_test.lu::test_summons_arrives_at_departing_tail ... ok
+test src/sim_test.lu::test_running_newcomer_is_immune_to_eagle ... ok
+d20: 3403/10000 hits; expected 3350..3650; bins [497, 459, 499, 521, 471, 482, 474, 490, 504, 525, 503, 479, 542, 536, 477, 522, 486, 509, 497, 527]
+test src/sim_test.lu::test_d20_distribution_10000_seeded_strikes ... ok
+test src/sim_test.lu::test_pack_of_one_death_and_miss ... ok
+test src/sim_test.lu::test_meat_eating_and_open_placement ... ok
+test src/sim_test.lu::test_pace_and_cadence_and_first_eagle ... ok
+approach length 1: 150 ticks, 5000 ms, pace 16 quarter-cells/s
+approach length 8: 105 ticks, 3500 ms, pace 23 quarter-cells/s
+approach length 16: 78 ticks, 2600 ms, pace 31 quarter-cells/s
+approach length 25: 60 ticks, 2000 ms, pace 40 quarter-cells/s
+test src/sim_test.lu::test_visible_approach_time_is_pinned_at_all_lengths ... ok
+test src/sim_test.lu::test_turn_two_cells_before_impact_dodges_without_rng ... ok
+test src/sim_test.lu::test_no_turn_is_caught_and_rolls_fair_d20 ... ok
+test src/sim_test.lu::test_self_collision_and_departing_tail ... ok
+test src/sim_test.lu::test_pause_and_seed_determinism ... ok
+test src/sim_test.lu::test_same_tick_turn_order_and_retry ... ok
+test src/sim_test.lu::test_card_start_keys_enter_gameplay_without_pausing ... ok
+test src/sim_test.lu::test_leg_phase_tracks_cells_not_ticks_and_pause_freezes_run_in ... ok
+test src/sim_test.lu::test_runner_arrival_keeps_final_contact_phase ... ok
+test src/sim_test.lu::test_scatter_is_seeded_and_card_waits_thirty_ticks ... ok
+test src/sim_test.lu::test_taken_last_wolf_is_carried_to_exit_before_card ... ok
+test src/sim_test.lu::test_predictive_aim_includes_seeded_meals_and_arrivals ... ok
+test src/sim_test.lu::test_dodges_consume_no_roll_even_in_a_long_stream ... ok
+test src/world/world_test.lu::test_deterministic ... ok
+test src/world/world_test.lu::test_seeds_differ ... ok
+test src/world/world_test.lu::test_noise_bounds_and_continuity ... ok
+test src/world/world_test.lu::test_forest_density_rises ... ok
+test src/world/world_test.lu::test_clearing_reads_and_a_stand_is_the_woods_with_more_trunks ... ok
+test src/world/world_test.lu::test_density_bands_are_ordered ... ok
+test src/world/world_test.lu::test_hash_range ... ok
+wolf test: 85 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+build: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+build: target/native/trail
+build: target/release/trail
+selftest: 0 failures; d20 3403/10000; decoder splits and diff property
+goldens: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+goldens: carry-200-rich ok
+goldens: carry-200-plain ok
+goldens: carry-80-rich ok
+goldens: carry-80-plain ok
+goldens: caught-200-rich ok
+goldens: caught-200-plain ok
+goldens: caught-80-rich ok
+goldens: caught-80-plain ok
+goldens: death-200-rich ok
+goldens: death-200-plain ok
+goldens: death-80-rich ok
+goldens: death-80-plain ok
+goldens: dodge-200-rich ok
+goldens: dodge-200-plain ok
+goldens: dodge-80-rich ok
+goldens: dodge-80-plain ok
+goldens: hit-200-rich ok
+goldens: hit-200-plain ok
+goldens: hit-80-rich ok
+goldens: hit-80-plain ok
+goldens: miss-200-rich ok
+goldens: miss-200-plain ok
+goldens: miss-80-rich ok
+goldens: miss-80-plain ok
+trail: verified score 1425
+goldens: natural-200-rich ok
+trail: verified score 1425
+goldens: natural-200-plain ok
+goldens: one-200-rich ok
+goldens: one-200-plain ok
+goldens: one-80-rich ok
+goldens: one-80-plain ok
+goldens: scatter-200-rich ok
+goldens: scatter-200-plain ok
+goldens: scatter-80-rich ok
+goldens: scatter-80-plain ok
+goldens: scatter-end-200-rich ok
+goldens: scatter-end-200-plain ok
+goldens: scatter-end-80-rich ok
+goldens: scatter-end-80-plain ok
+goldens: stride-down-200-rich ok
+goldens: stride-down-200-plain ok
+goldens: stride-down-80-rich ok
+goldens: stride-down-80-plain ok
+goldens: stride-left-200-rich ok
+goldens: stride-left-200-plain ok
+goldens: stride-left-80-rich ok
+goldens: stride-left-80-plain ok
+goldens: stride-right-200-rich ok
+goldens: stride-right-200-plain ok
+goldens: stride-right-80-rich ok
+goldens: stride-right-80-plain ok
+goldens: stride-up-200-rich ok
+goldens: stride-up-200-plain ok
+goldens: stride-up-80-rich ok
+goldens: stride-up-80-plain ok
+goldens: summons-200-rich ok
+goldens: summons-200-plain ok
+goldens: summons-80-rich ok
+goldens: summons-80-plain ok
+goldens: telegraph-200-rich ok
+goldens: telegraph-200-plain ok
+goldens: telegraph-80-rich ok
+goldens: telegraph-80-plain ok
+goldens: title-200-rich ok
+goldens: title-200-plain ok
+goldens: title-80-rich ok
+goldens: title-80-plain ok
+goldens: wrap-down-200-rich ok
+goldens: wrap-down-200-plain ok
+goldens: wrap-down-80-rich ok
+goldens: wrap-down-80-plain ok
+goldens: wrap-left-200-rich ok
+goldens: wrap-left-200-plain ok
+goldens: wrap-left-80-rich ok
+goldens: wrap-left-80-plain ok
+goldens: wrap-right-200-rich ok
+goldens: wrap-right-200-plain ok
+goldens: wrap-right-80-rich ok
+goldens: wrap-right-80-plain ok
+goldens: wrap-up-200-rich ok
+goldens: wrap-up-200-plain ok
+goldens: wrap-up-80-rich ok
+goldens: wrap-up-80-plain ok
+goldens: art ok
+pty: quit ok (linux x86_64, exit 0, 30550 bytes captured)
+pty: ctrl-c ok (linux x86_64, exit 0, 30550 bytes captured)
+pty: trap ok (linux x86_64, exit 134, 28647 bytes captured)
+pty: agree-rich ok (linux x86_64, exit 0, 29080 bytes captured)
+pty: agree-plain ok (linux x86_64, exit 0, 5576 bytes captured)
+pty: scatter-before-card ok (linux x86_64, exit 0, 42139 bytes captured)
+pty: title-pause ok (linux x86_64, exit 0, 30636 bytes captured)
+pty: title-cr ok (linux x86_64, exit 0, 30034 bytes captured)
+pty: title-space ok (linux x86_64, exit 0, 30034 bytes captured)
+pty: minimum-40x16 ok (linux x86_64, exit 0, 2511 bytes captured)
+pty: escape ok (linux x86_64, exit 0, 29080 bytes captured)
+pty: resize ok (linux x86_64, exit 0, 75768 bytes captured)
+pty: record-roundtrip ok (linux x86_64, exit 0, 29981 bytes captured)
+check-linux: green

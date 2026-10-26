@@ -1,0 +1,436 @@
+in-container: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+check-fmt: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+check-fmt: canonical
+test: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+test src/areas_test.lu::test_cb04_the_graph_has_six_areas_and_nine_edges ... ok
+test src/areas_test.lu::test_cb04_every_area_reaches_its_dens_portals_and_arena ... ok
+test src/areas_test.lu::test_cb04_arenas_are_open_ground_inside_their_bounds ... ok
+test src/areas_test.lu::test_cb04_the_shallows_are_waded_at_half_pace ... ok
+test src/areas_test.lu::test_cb04_the_new_areas_keep_the_texture_and_path_bars ... ok
+test src/areas_test.lu::test_cb04_the_boar_clearing_is_a_branch_off_the_thicket ... ok
+test src/areas_test.lu::test_cb04_schema_3_carries_the_bosses_and_refuses_schema_2 ... ok
+test src/areas_test.lu::test_cb04_played_and_lost_are_counted_at_rests_and_deaths ... ok
+test src/art_test.lu::test_render_is_pure ... ok
+test src/art_test.lu::test_the_cub_is_at_the_centre_on_both_tiers ... ok
+test src/art_test.lu::test_the_cub_turns_on_the_screen ... ok
+test src/art_test.lu::test_the_sheet ... ok
+test src/art_test.lu::test_combat_posture_0 ... ok
+test src/art_test.lu::test_combat_posture_1 ... ok
+test src/art_test.lu::test_combat_posture_2 ... ok
+test src/art_test.lu::test_combat_posture_3 ... ok
+test src/art_test.lu::test_combat_posture_4 ... ok
+test src/art_test.lu::test_combat_posture_5 ... ok
+test src/art_test.lu::test_combat_posture_6 ... ok
+test src/art_test.lu::test_cb01b_sideways_silhouette_keeps_body_cells ... ok
+test src/art_test.lu::test_cb01b_each_foe_has_head_body_tail_tell_and_fade_on_both_tiers ... ok
+test src/art_test.lu::test_cb01b_scent_hud_updates_on_kill_death_and_recovery ... ok
+test src/bosses_test.lu::test_cb04_every_telegraph_is_at_least_the_parry_window ... ok
+test src/bosses_test.lu::test_cb04_a_boss_never_leaves_its_arena ... ok
+test src/bosses_test.lu::test_cb04_the_boar_gore_is_parried_and_the_charge_dodged ... ok
+test src/bosses_test.lu::test_cb04_a_lunge_into_the_charge_staggers_the_boar_and_bites_never_do ... ok
+test src/bosses_test.lu::test_cb04_half_health_is_the_second_phase ... ok
+test src/bosses_test.lu::test_cb04_a_beaten_boss_stays_beaten_and_opens_its_shortcut ... ok
+test src/bosses_test.lu::test_cb04_the_alpha_turns_a_bite_and_hops_a_lunge ... ok
+test src/bosses_test.lu::test_cb04_the_health_bar_shows_while_the_boss_is_engaged ... ok
+test src/bosses_test.lu::test_cb04_the_health_bar_follows_the_cub_to_the_arena_mouth ... ok
+test src/bosses_test.lu::test_cb04_bosses_are_the_drawings_and_never_overlap_the_cub ... ok
+test src/clock/clock_test.lu::test_no_tick_before_its_time ... ok
+test src/clock/clock_test.lu::test_one_tick_on_time ... ok
+test src/clock/clock_test.lu::test_late_frames_drop_renders_not_ticks ... ok
+test src/clock/clock_test.lu::test_ms_until_rounds_up ... ok
+test src/clock/clock_test.lu::test_thirty_ticks_a_second ... ok
+test src/coast_test.lu::test_cb02a_forest_fill_is_visible_beyond_area_bounds ... ok
+test src/coast_test.lu::test_cb02a_bank_has_no_sawtooth_steps ... ok
+test src/coast_test.lu::test_cb02a_each_branch_ends_in_an_alcove ... ok
+test src/coast_test.lu::test_cb02a_jetties_never_cut_den_from_thorn_route ... ok
+test src/coast_test.lu::test_cb02a_coast_sheet_keeps_plain_tier_and_sprite_footprints ... ok
+test src/coast_test.lu::test_cb02a_rich_props_emit_scalar_glyphs_not_utf8_bytes ... ok
+test src/coast_test.lu::test_cb02a_branches_join_the_shore_without_an_origin_seam ... ok
+test src/coast_test.lu::test_cb02a_guard_does_not_hide_the_treasure_sprite ... ok
+test src/combat_test.lu::test_parry_window_edges ... ok
+test src/combat_test.lu::test_parry_riposte_doubles_next_bite_not_the_parry ... ok
+test src/combat_test.lu::test_bite_windup_active_recovery_and_one_hit ... ok
+test src/combat_test.lu::test_bite_chain_waits_for_recovery ... ok
+test src/combat_test.lu::test_dodge_edges_and_three_cell_hop ... ok
+test src/combat_test.lu::test_dodge_avoids_a_bite_not_a_body ... ok
+test src/combat_test.lu::test_exhaustion_blocks_heavy_moves_until_recovered ... ok
+test src/combat_test.lu::test_water_heals_forty_over_last_fifteen_ticks_and_interrupts ... ok
+test src/combat_test.lu::test_den_rest_and_growth ... ok
+test src/combat_test.lu::test_second_death_replaces_mark ... ok
+test src/combat_test.lu::test_trail_expires_and_sneak_lays_none ... ok
+test src/combat_test.lu::test_fox_feint_is_harmless_then_steals_water ... ok
+test src/combat_test.lu::test_weasel_readable_tell_and_retreat ... ok
+test src/combat_test.lu::test_sight_cone_and_scent_are_independent ... ok
+test src/combat_test.lu::test_lock_release_and_sixty_unseen_ticks ... ok
+test src/combat_test.lu::test_lunge_breaks_gate_and_rest_keeps_it_open ... ok
+test src/combat_test.lu::test_ordinary_motion_cannot_cross_a_foe_body ... ok
+test src/combat_test.lu::test_sight_is_occluded_by_closed_thorns ... ok
+test src/combat_test.lu::test_foe_windup_turns_without_pivoting ... ok
+test src/combat_test.lu::test_lunge_staggers_a_surviving_foe_and_hits_once ... ok
+test src/combat_test.lu::test_first_lock_uses_geometric_nearest_then_cycles ... ok
+test src/controls_test.lu::test_arrows_walk_and_shift_arrows_sneak ... ok
+test src/controls_test.lu::test_the_moves_and_the_quit ... ok
+test src/controls_test.lu::test_key_names_round_trip ... ok
+test src/feel_test.lu::test_cb01b_eight_aims_commit_before_turning ... ok
+test src/feel_test.lu::test_cb01b_aim_window_event_order_duplicates_and_fallback ... ok
+test src/feel_test.lu::test_cb01b_lock_overrides_arrow_aim ... ok
+test src/feel_test.lu::test_cb01b_bite_has_a_travelling_arc_and_returns ... ok
+test src/feel_test.lu::test_cb01b_lunge_triangle_and_collision_clip ... ok
+test src/feel_test.lu::test_cb01b_combo_cycles_and_lapsed_window_resets ... ok
+test src/feel_test.lu::test_cb01b_combo_arcs_lean_and_finish_without_extra_damage ... ok
+test src/feel_test.lu::test_cb01b_heavy_backsteps_leap_burst_and_recovery ... ok
+test src/feel_test.lu::test_cb01b_heavy_cost_damage_stagger_and_refusal ... ok
+test src/feel_test.lu::test_cb01b_lunge_breaks_nearest_thorn_at_the_gate_face ... ok
+test src/forest_test.lu::test_cb02_seeded_centres_are_walkable_and_meander ... ok
+test src/forest_test.lu::test_cb02_shortcut_round_trips ... ok
+test src/forest_test.lu::test_cb02_death_and_mark_cross_area ... ok
+test src/forest_test.lu::test_cb02_hawk_stopping_shadow_and_parry ... ok
+test src/forest_test.lu::test_cb02_hawk_airborne_and_committed_strike ... ok
+test src/gait_test.lu::test_cb02c_the_coast_path_is_the_shore_gravel ... ok
+test src/gait_test.lu::test_cb02c_branch_0_draws_the_path_colours ... ok
+test src/gait_test.lu::test_cb02c_branch_1_draws_the_path_colours ... ok
+test src/gait_test.lu::test_cb02c_branch_2_draws_the_path_colours ... ok
+test src/gait_test.lu::test_cb02c_branch_3_draws_the_path_colours ... ok
+test src/gait_test.lu::test_cb02c_wide_branches_draw_the_path_colours ... ok
+test src/gait_test.lu::test_cb02c_the_log_branch_and_the_shore_are_the_path ... ok
+test src/gait_test.lu::test_cb02c_the_forest_is_not_the_path ... ok
+test src/gait_test.lu::test_cb02c_the_pace_scales_through_walk_percent ... ok
+test src/gait_test.lu::test_cb02c_the_fox_keeps_up_on_the_straight_and_loses_in_the_turns ... ok
+test src/gait_test.lu::test_cb02c_the_tail_wags_on_the_gait_not_the_tick ... ok
+test src/gait_test.lu::test_cb02c_the_tail_holds_still_between_its_frames ... ok
+test src/gait_test.lu::test_cb02c_the_frame_draws_the_gait ... ok
+test src/gait_test.lu::test_cb02c_the_bodies_are_the_drawings ... ok
+test src/gait_test.lu::test_cb02c_a_swarm_from_behind_never_overlaps_and_is_fought ... ok
+test src/gait_test.lu::test_cb02c_the_census_sees_an_overlap ... ok
+test src/gait_test.lu::test_cb02c_a_foe_walking_in_stops_on_the_ring_in_reach ... ok
+test src/gait_test.lu::test_cb02c_a_turn_never_swings_the_cub_into_a_foe ... ok
+test src/gait_test.lu::test_cb02c_two_foes_never_share_a_cell ... ok
+test src/gate_art_test.lu::test_cb02_thorn_pair_is_not_a_wall_or_label ... ok
+test src/gate_test.lu::test_cb02_lunge_hits_whole_rightmost_thorn_cell ... ok
+test src/gate_test.lu::test_cb02_bite_names_the_lunge_at_thorns ... ok
+test src/ghost_test.lu::test_cb04_trailer_is_the_last_ticks_in_order ... ok
+test src/ghost_test.lu::test_cb04_reader_rebuilds_the_frames ... ok
+test src/ghost_test.lu::test_cb04_a_short_life_trails_from_its_first_tick ... ok
+test src/ghost_test.lu::test_cb04_no_trailer_is_no_ghost ... ok
+test src/ghost_test.lu::test_cb04_the_set_keeps_the_newest_five ... ok
+test src/glyphs_test.lu::test_glyphs_doc_matches_the_tier ... ok
+test src/glyphs_test.lu::test_plain_tier_needs_no_row ... ok
+test src/grid/grid_test.lu::test_empty_diff_writes_nothing ... ok
+test src/grid/grid_test.lu::test_one_cell_diff ... ok
+test src/grid/grid_test.lu::test_full_repaint_is_contiguous ... ok
+test src/grid/grid_test.lu::test_style_run_sets_sgr_once ... ok
+test src/grid/grid_test.lu::test_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_sixteen_dialect_bright ... ok
+test src/grid/grid_test.lu::test_utf8_lengths ... ok
+test src/grid/grid_test.lu::test_property_apply_diff_equals_next ... ok
+test src/grid/grid_test.lu::test_property_holds_in_the_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_model_wraps_and_scrolls ... ok
+test src/grid/grid_test.lu::test_model_private_modes ... ok
+test src/grid/grid_test.lu::test_model_malformed_utf8 ... ok
+test src/grid/grid_test.lu::test_dump_text_and_styles ... ok
+test src/grid/grid_test.lu::test_plain_ok ... ok
+test src/grid/grid_test.lu::test_bounds_are_soft ... ok
+test src/grove_test.lu::test_cb02b_forest_texture_everywhere ... ok
+test src/grove_test.lu::test_cb02b_coast_reaches_a_screen_past_the_view ... ok
+test src/grove_test.lu::test_cb02b_four_branches_leave_the_coast ... ok
+test src/grove_test.lu::test_cb02b_the_field_is_saved_and_never_moves ... ok
+test src/grove_test.lu::test_cb02b_inland_paths_end_inside_the_field ... ok
+test src/grove_test.lu::test_cb02b_cub_east_is_the_north_cub_turned ... ok
+test src/input/input_test.lu::test_csi_arrows ... ok
+test src/input/input_test.lu::test_ss3_arrows ... ok
+test src/input/input_test.lu::test_shift_arrows_are_their_own_keys ... ok
+test src/input/input_test.lu::test_other_modifiers_are_the_bare_arrow ... ok
+test src/input/input_test.lu::test_plain_keys ... ok
+test src/input/input_test.lu::test_lone_esc_waits_for_the_timeout ... ok
+test src/input/input_test.lu::test_esc_then_bracket_late_is_still_a_sequence ... ok
+test src/input/input_test.lu::test_esc_then_plain_byte_is_esc_and_the_byte ... ok
+test src/input/input_test.lu::test_ignored_forms ... ok
+test src/input/input_test.lu::test_unknown_bytes_are_dropped_and_counted ... ok
+test src/input/input_test.lu::test_two_sequences_in_one_read ... ok
+test src/input/input_test.lu::test_a_tap_holds_for_the_tap_ticks ... ok
+test src/input/input_test.lu::test_a_repeat_run_releases_one_interval_after_the_last_press ... ok
+test src/input/input_test.lu::test_kitty_printable_low_matrix ... ok
+test src/input/input_test.lu::test_kitty_printable_high_matrix ... ok
+test src/input/input_test.lu::test_kitty_special_matrix ... ok
+test src/input/input_test.lu::test_kitty_functional_matrix ... ok
+test src/input/input_test.lu::test_kitty_defaults_optional_fields_and_refusals ... ok
+test src/input/input_test.lu::test_exact_down_resumes_after_left_tap ... ok
+test src/input/input_test.lu::test_exact_diagonal_and_ctrl_across_arrows ... ok
+test src/input/input_test.lu::test_registered_key_and_inferred_equivalence ... ok
+test src/journey_test.lu::test_cb02_save_canonical_round_trip_at_last_den ... ok
+test src/journey_test.lu::test_cb02_save_rejects_unknown_corrupt_and_inconsistent_data ... ok
+test src/journey_test.lu::test_cb02_all_dens_restore_with_growth_and_water ... ok
+test src/meadow_test.lu::test_cb03a_landmark_rules_and_original_atlas ... ok
+test src/meadow_test.lu::test_cb03a_creek_never_closes_the_route_ford ... ok
+test src/meadow_test.lu::test_cb03a_deer_flee_is_bounded_and_the_turn_is_a_free_hit ... ok
+test src/posture_test.lu::test_cb03_the_health_bands ... ok
+test src/posture_test.lu::test_cb03_the_hurt_frames_are_the_one_drawing_changed ... ok
+test src/posture_test.lu::test_cb03_the_breath ... ok
+test src/posture_test.lu::test_cb03a_outlined_bars_are_always_present_and_labelled ... ok
+test src/posture_test.lu::test_cb03a_health_changes_the_cub_and_its_bar ... ok
+test src/posture_test.lu::test_cb03_the_death_card_and_the_den_name_the_numbers ... ok
+test src/posture_test.lu::test_cb03_the_sheet_holds_the_bands_and_the_breath ... ok
+test src/posture_test.lu::test_cb03_the_gait_scales_with_the_dial ... ok
+test src/refuge_test.lu::test_cb03a_fifty_seed_den_census_rejects_an_empty_area ... ok
+test src/refuge_test.lu::test_cb03a_each_new_den_rests_and_roundtrips_schema_three ... ok
+test src/refuge_test.lu::test_cb03a_clearings_seeds_0_9 ... ok
+test src/refuge_test.lu::test_cb03a_clearings_seeds_10_19 ... ok
+test src/refuge_test.lu::test_cb03a_clearings_seeds_20_29 ... ok
+test src/refuge_test.lu::test_cb03a_clearings_seeds_30_39 ... ok
+test src/refuge_test.lu::test_cb03a_clearings_seeds_40_49 ... ok
+test src/refuge_test.lu::test_cb03a_reserved_den_bits_are_not_valid_found_locations ... ok
+test src/refuge_test.lu::test_cb03a_every_hard_cluster_has_a_downstream_refuge ... ok
+test src/replay/replay_test.lu::test_vocabulary ... ok
+test src/replay/replay_test.lu::test_parse_sample ... ok
+test src/replay/replay_test.lu::test_round_trip ... ok
+test src/replay/replay_test.lu::test_refusals ... ok
+test src/replay/replay_test.lu::test_parse_size ... ok
+test src/replay/replay_test.lu::test_start_is_read_written_and_defaults_to_zero ... ok
+test src/replay/replay_test.lu::test_the_score_comment_is_written_read_and_optional ... ok
+test src/score_test.lu::test_cb03_every_part_parses_at_its_written_length ... ok
+test src/score_test.lu::test_cb03_the_binary_carries_the_committed_parts ... ok
+test src/score_test.lu::test_cb03_each_part_names_its_cue_fade ... ok
+test src/score_test.lu::test_cb03_the_areas_and_bosses_have_their_parts_and_slots ... ok
+test src/score_test.lu::test_cb03_want_decides_in_order ... ok
+test src/score_test.lu::test_cb03_an_area_loop_restarts_at_its_length ... ok
+test src/score_test.lu::test_cb03_an_area_change_crossfades ... ok
+test src/score_test.lu::test_cb03_a_boss_theme_ducks_the_area_loop ... ok
+test src/score_test.lu::test_cb03_the_death_sting_stops_the_loop_and_is_never_cut ... ok
+test src/score_test.lu::test_cb03_the_den_rests_and_the_loop_resumes ... ok
+test src/score_test.lu::test_cb03_the_title_plays_over_the_opening ... ok
+test src/score_test.lu::test_cb03_a_slot_without_a_part_is_the_silence ... ok
+test src/score_test.lu::test_cb03_the_replay_scenes_cover_the_schedule ... ok
+test src/sim_test.lu::test_two_runs_are_one ... ok
+test src/sim_test.lu::test_trigonometry ... ok
+test src/sim_test.lu::test_heading_of_the_held_keys ... ok
+test src/sim_test.lu::test_turn_rate_bounds_the_heading_change ... ok
+test src/sim_test.lu::test_speed_never_jumps_and_the_sneak_is_half ... ok
+test src/sim_test.lu::test_a_tap_holds_for_the_tap_ticks ... ok
+test src/sim_test.lu::test_the_water_stops_the_cub ... ok
+test src/sim_test.lu::test_the_camera_keeps_the_cub_at_the_centre ... ok
+test src/sim_test.lu::test_the_stats_give_the_bars ... ok
+test src/sim_test.lu::test_cb01b_speed_scaling_keeps_the_weasel_bars ... ok
+test src/sprint_test.lu::test_cb03a_combo_cones_slant_left_right_forward ... ok
+test src/sprint_test.lu::test_cb03a_x_uses_facing_and_two_backward_steps ... ok
+test src/sprint_test.lu::test_cb03a_sprint_charges_twelve_per_second_and_stops_empty ... ok
+test src/sprint_test.lu::test_cb03a_tap_dodges_and_sprint_bite_costs_more_than_lunge ... ok
+test src/sprint_test.lu::test_cb03a_every_combo_hits_dead_ahead_contact_cardinals ... ok
+test src/sprint_test.lu::test_cb03a_every_combo_hits_dead_ahead_contact_diagonals ... ok
+test src/sprint_test.lu::test_cb03a_snapping_head_checks_the_landing_body_not_the_start ... ok
+test src/sprites_test.lu::test_plain_tier_keeps_its_promise ... ok
+test src/sprites_test.lu::test_rich_tier_colours_are_indices ... ok
+test src/sprites_test.lu::test_the_cub_is_one_silhouette_turned_to_face_the_way ... ok
+test src/sprites_test.lu::test_water_and_floor_backgrounds_differ_from_the_gravel ... ok
+test src/terrain_test.lu::test_noise2_bounds_and_determinism ... ok
+test src/terrain_test.lu::test_noise2_is_smooth ... ok
+test src/terrain_test.lu::test_the_bank_wanders_within_its_swing ... ok
+test src/terrain_test.lu::test_the_bands_lie_in_order ... ok
+test src/terrain_test.lu::test_the_start_is_open_ground ... ok
+test src/terrain_test.lu::test_woods_cover_0 ... ok
+test src/terrain_test.lu::test_woods_cover_1 ... ok
+test src/terrain_test.lu::test_woods_cover_2 ... ok
+test src/terrain_test.lu::test_woods_cover_3 ... ok
+test src/world/world_test.lu::test_deterministic ... ok
+test src/world/world_test.lu::test_seeds_differ ... ok
+test src/world/world_test.lu::test_noise_bounds_and_continuity ... ok
+test src/world/world_test.lu::test_forest_density_rises ... ok
+test src/world/world_test.lu::test_clearing_reads_and_a_stand_is_the_woods_with_more_trunks ... ok
+test src/world/world_test.lu::test_density_bands_are_ordered ... ok
+test src/world/world_test.lu::test_hash_range ... ok
+test src/world_rules_test.lu::test_cb02_scent_pickup_expires_and_never_double_collects ... ok
+test src/world_rules_test.lu::test_cb02_hawk_shadow_does_not_pin_a_dodge ... ok
+test src/world_rules_test.lu::test_cb02_cache_is_guarded_finite_and_persisted ... ok
+test src/world_rules_test.lu::test_cb02_opening_is_timed_skippable_and_pure_on_both_tiers ... ok
+test src/world_rules_test.lu::test_cb02_spawned_bodies_stand_on_passable_ground ... ok
+wolf test: 240 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+build: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+build: target/native/cub
+build: target/release/cub
+selftest: ok (the controls table whole and split at every byte; the diff property over 12 frames)
+goldens: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+goldens: aim-e-rich ok
+goldens: aim-e-plain ok
+goldens: aim-lock-rich ok
+goldens: aim-lock-plain ok
+goldens: aim-n-rich ok
+goldens: aim-n-plain ok
+goldens: aim-ne-rich ok
+goldens: aim-ne-plain ok
+goldens: aim-nw-rich ok
+goldens: aim-nw-plain ok
+goldens: aim-s-rich ok
+goldens: aim-s-plain ok
+goldens: aim-se-rich ok
+goldens: aim-se-plain ok
+goldens: aim-sw-rich ok
+goldens: aim-sw-plain ok
+goldens: aim-w-rich ok
+goldens: aim-w-plain ok
+goldens: bite-arc-rich ok
+goldens: bite-arc-plain ok
+goldens: bite-rich ok
+goldens: bite-plain ok
+goldens: boss-alpha-beaten-rich ok
+goldens: boss-alpha-beaten-plain ok
+goldens: boss-alpha-phase2-rich ok
+goldens: boss-alpha-phase2-plain ok
+goldens: boss-alpha-windup-rich ok
+goldens: boss-alpha-windup-plain ok
+goldens: boss-boar-beaten-rich ok
+goldens: boss-boar-beaten-plain ok
+goldens: boss-boar-phase2-rich ok
+goldens: boss-boar-phase2-plain ok
+goldens: boss-boar-windup-rich ok
+goldens: boss-boar-windup-plain ok
+goldens: boss-elk-beaten-rich ok
+goldens: boss-elk-beaten-plain ok
+goldens: boss-elk-phase2-rich ok
+goldens: boss-elk-phase2-plain ok
+goldens: boss-elk-windup-rich ok
+goldens: boss-elk-windup-plain ok
+goldens: boss-lynx-beaten-rich ok
+goldens: boss-lynx-beaten-plain ok
+goldens: boss-lynx-phase2-rich ok
+goldens: boss-lynx-phase2-plain ok
+goldens: boss-lynx-windup-rich ok
+goldens: boss-lynx-windup-plain ok
+goldens: coast-cache-0-rich ok
+goldens: coast-cache-0-plain ok
+goldens: coast-cache-1-rich ok
+goldens: coast-cache-1-plain ok
+goldens: coast-cache-2-rich ok
+goldens: coast-cache-2-plain ok
+goldens: coast-cache-3-rich ok
+goldens: coast-cache-3-plain ok
+goldens: crags-rich ok
+goldens: crags-plain ok
+goldens: death-recovery-rich ok
+goldens: death-recovery-plain ok
+goldens: demo-rich ok
+goldens: demo-plain ok
+goldens: den-after-cluster-rich ok
+goldens: den-after-cluster-plain ok
+goldens: den-bars-120x40-rich ok
+goldens: den-bars-120x40-plain ok
+goldens: den-bars-80x24-rich ok
+goldens: den-bars-80x24-plain ok
+goldens: diagonal-rich ok
+goldens: diagonal-plain ok
+goldens: dodge-rich ok
+goldens: dodge-plain ok
+goldens: end-rich ok
+goldens: end-plain ok
+goldens: forward-windup-rich ok
+goldens: forward-windup-plain ok
+goldens: fox-feint-rich ok
+goldens: fox-feint-plain ok
+goldens: ghost-death-rich ok
+goldens: ghost-death-plain ok
+goldens: ghost-rich ok
+goldens: ghost-plain ok
+goldens: hawk-shadow-rich ok
+goldens: hawk-shadow-plain ok
+goldens: hawk-stoop-rich ok
+goldens: hawk-stoop-plain ok
+goldens: heavy-rich ok
+goldens: heavy-plain ok
+goldens: meadow-ford-rich ok
+goldens: meadow-ford-plain ok
+goldens: meadow-landmarks-rich ok
+goldens: meadow-landmarks-plain ok
+goldens: natural-death-rich ok
+goldens: natural-death-plain ok
+goldens: old-den-rich ok
+goldens: old-den-plain ok
+goldens: opening-skip-rich ok
+goldens: opening-skip-plain ok
+goldens: opening-rich ok
+goldens: opening-plain ok
+goldens: parry-rich ok
+goldens: parry-plain ok
+goldens: posture-badly-rich ok
+goldens: posture-badly-plain ok
+goldens: posture-dying-rich ok
+goldens: posture-dying-plain ok
+goldens: posture-full-rich ok
+goldens: posture-full-plain ok
+goldens: posture-hurt-rich ok
+goldens: posture-hurt-plain ok
+goldens: resize-rich ok
+goldens: resize-plain ok
+goldens: rest-rich ok
+goldens: rest-plain ok
+goldens: river-rich ok
+goldens: river-plain ok
+goldens: saved-den-rich ok
+goldens: saved-den-plain ok
+goldens: scroll-rich ok
+goldens: scroll-plain ok
+goldens: sneak-rich ok
+goldens: sneak-plain ok
+goldens: sprint-120x40-rich ok
+goldens: sprint-120x40-plain ok
+goldens: sprint-80x24-rich ok
+goldens: sprint-80x24-plain ok
+goldens: sprint-hit-rich ok
+goldens: sprint-hit-plain ok
+goldens: stand-rich ok
+goldens: stand-plain ok
+goldens: thorn-gate-rich ok
+goldens: thorn-gate-plain ok
+goldens: three-bites-rich ok
+goldens: three-bites-plain ok
+goldens: title-demo-rich ok
+goldens: title-demo-plain ok
+goldens: title-rich ok
+goldens: title-plain ok
+goldens: trail-fading-rich ok
+goldens: trail-fading-plain ok
+goldens: turn-east-rich ok
+goldens: turn-east-plain ok
+goldens: walk-north-rich ok
+goldens: walk-north-plain ok
+goldens: weasel-retreat-rich ok
+goldens: weasel-retreat-plain ok
+goldens: wide-rich ok
+goldens: wide-plain ok
+goldens: world-den-rich ok
+goldens: world-den-plain ok
+goldens: world-gate-rich ok
+goldens: world-gate-plain ok
+goldens: world-hawk-rich ok
+goldens: world-hawk-plain ok
+goldens: world-meadow-rich ok
+goldens: world-meadow-plain ok
+goldens: world-open-rich ok
+goldens: world-open-plain ok
+goldens: world-recovered-rich ok
+goldens: world-recovered-plain ok
+goldens: world-return-rich ok
+goldens: world-return-plain ok
+goldens: world-thorns-rich ok
+goldens: world-thorns-plain ok
+goldens: art ok
+pty: quit ok (linux x86_64, exit 0, 23328 bytes captured)
+pty: ctrl-c ok (linux x86_64, exit 0, 17342 bytes captured)
+pty: trap ok (linux x86_64, exit 134, 16253 bytes captured)
+pty: agree-rich ok (linux x86_64, exit 0, 55684 bytes captured)
+pty: agree-plain ok (linux x86_64, exit 0, 30343 bytes captured)
+pty: den-keys ok (linux x86_64, exit 0, 14090 bytes captured)
+pty: death-agree ok (linux x86_64, exit 0, 177181 bytes captured)
+pty: archive-failure ok (linux x86_64, exit 2, 142904 bytes captured)
+pty: feel-controls ok (linux x86_64, exit 0, 9682 bytes captured)
+pty: pending-save ok (linux x86_64, exit 0, 10895 bytes captured)
+pty: save-failure ok (linux x86_64, exit 2, 10864 bytes captured)
+pty: resumed-record ok (linux x86_64, exit 0, 9921 bytes captured)
+pty: sound-live ok (linux x86_64, exit 0, 5342 bytes captured; children during the run []; 11 WAVs)
+pty: sound-oss ok (linux x86_64, exit 0, 4577 bytes captured)
+pty: sound-mute ok (linux x86_64, exit 0, 4956 bytes captured)
+pty: mute-key ok (linux x86_64, exit 0, 17027 bytes captured)
+pty: title ok (linux x86_64, exit 0, 5019 bytes captured)
+pty: title-demo ok (linux x86_64, exit 0, 48728 bytes captured)
+pty: sprint-live ok (linux x86_64, exit 0, 96829 bytes captured)
+pty: sprint-lands ok (linux x86_64, exit 0, 647462 bytes captured)
+check-linux: green

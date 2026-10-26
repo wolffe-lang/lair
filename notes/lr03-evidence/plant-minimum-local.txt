@@ -1,0 +1,20 @@
+check-fmt: canonical
+build: target/native/lair
+build: target/release/lair
+input-pty native/normal kitty ok
+input-pty native/ctrl-c kitty ok
+input-pty native/crash kitty ok
+input-pty native/error kitty ok
+input-pty native/stream kitty ok
+input-pty native/normal fallback ok
+input-pty native/legacy fallback ok
+Traceback (most recent call last):
+  File "/work/tools/input-check", line 128, in <module>
+    result = main()
+             ^^^^^^
+  File "/work/tools/input-check", line 99, in main
+    row(binary, "small", rows=12, cols=40)
+  File "/work/tools/input-check", line 35, in row
+    assert QUERY in s.out, "support query missing"
+           ^^^^^^^^^^^^^^
+AssertionError: support query missing

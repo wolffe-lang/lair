@@ -1,0 +1,15 @@
+check-fmt: canonical
+build: target/native/lair
+build: target/release/lair
+input-pty native/normal kitty ok
+input-pty native/ctrl-c kitty ok
+Traceback (most recent call last):
+  File "/work/tools/input-check", line 128, in <module>
+    result = main()
+             ^^^^^^
+  File "/work/tools/input-check", line 96, in main
+    row(binary, mode)
+  File "/work/tools/input-check", line 83, in row
+    assert s.out.count(PUSH) == 1 and s.out.count(POP) == 1, (mode, s.out)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('crash', b'\x1b[?1049h\x1b[?25l\x1b[H\x1b[2J\x1b[?u\x1b[>11u\x1b[0m\x1b[?25h\x1b[?1049l')

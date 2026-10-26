@@ -1,0 +1,283 @@
+in-container: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+check-fmt: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+check-fmt: canonical
+test: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+test src/art_test.lu::test_render_is_deterministic ... ok
+test src/art_test.lu::test_alpha_sits_low_on_the_screen_and_the_pack_ahead ... ok
+test src/art_test.lu::test_a_fainted_wolf_is_drawn_where_it_lies_then_leaves_the_screen ... ok
+test src/art_test.lu::test_posture_shows_in_the_ears ... ok
+test src/art_test.lu::test_plain_frame_keeps_the_promise ... ok
+test src/art_test.lu::test_frames_change_as_the_wolf_moves ... ok
+test src/art_test.lu::test_sheet_draws_both_tiers ... ok
+test src/art_test.lu::test_a_shadow_is_drawn_where_the_simulation_has_it_eyes_toward_the_pack ... ok
+test src/art_test.lu::test_a_vanquished_shadow_fades_then_is_not_drawn ... ok
+test src/art_test.lu::test_no_digit_in_the_field_before_the_card_and_the_card_has_them ... ok
+test src/art_test.lu::test_the_card_is_latin1_text_on_both_tiers_and_the_same_numbers ... ok
+test src/art_test.lu::test_render_with_shadows_is_deterministic_and_plain_keeps_the_promise ... ok
+test src/art_test.lu::test_night_changes_the_colours_and_not_the_glyphs ... ok
+test src/art_test.lu::test_pk04_pack_leap_has_distinct_poses_on_both_tiers ... ok
+test src/art_test.lu::test_pk04_shadow_crouch_and_lunge_are_distinct_on_both_tiers ... ok
+test src/art_test.lu::test_pk04_death_freezes_attack_tail_eyes_and_every_style ... ok
+test src/best/best_test.lu::test_empty_round_trip_and_record ... ok
+test src/best/best_test.lu::test_refusals_by_name ... ok
+test src/best/best_test.lu::test_a_bad_line_is_refused_and_a_comment_ignored ... ok
+test src/best/best_test.lu::test_basename ... ok
+test src/clock/clock_test.lu::test_no_tick_before_its_time ... ok
+test src/clock/clock_test.lu::test_one_tick_on_time ... ok
+test src/clock/clock_test.lu::test_late_frames_drop_renders_not_ticks ... ok
+test src/clock/clock_test.lu::test_ms_until_rounds_up ... ok
+test src/clock/clock_test.lu::test_thirty_ticks_a_second ... ok
+test src/controls_test.lu::test_arrows_steer_sprint_and_stop ... ok
+test src/controls_test.lu::test_shift_down_is_parry ... ok
+test src/controls_test.lu::test_plain_keys ... ok
+test src/controls_test.lu::test_esc_then_plain_byte_is_quit_and_the_byte ... ok
+test src/controls_test.lu::test_two_sequences_in_one_read ... ok
+test src/controls_test.lu::test_text_mode ... ok
+test src/controls_test.lu::test_key_names_round_trip ... ok
+test src/directional_test.lu::test_pk06b_timing_table_diagonals_in_both_orders_cardinals_and_default ... ok
+test src/directional_test.lu::test_pk06b_opposites_choose_later_press_on_each_axis ... ok
+test src/directional_test.lu::test_pk06b_aim_window_exact_boundary_and_steering_still_releases ... ok
+test src/directional_test.lu::test_pk06_hold_at_space_uses_event_order_and_repeat_expiry ... ok
+test src/directional_test.lu::test_pk06_sector_contact_and_boundaries_for_every_aim ... ok
+test src/directional_test.lu::test_pk06_sideways_hit_outside_sector_is_not_vanquished ... ok
+test src/directional_test.lu::test_pk06_backward_resumes_forward_and_hits_only_its_sector ... ok
+test src/directional_test.lu::test_pk06_only_running_members_of_the_leaping_group_hit ... ok
+test src/directional_test.lu::test_pk06_tell_precedes_each_arc_and_camera_stays_anchored ... ok
+test src/directional_test.lu::test_pk06_default_and_up_choose_identical_aim_not_identical_gait ... ok
+test src/directional_test.lu::test_pk06_six_cell_arc_and_resize_preserve_all_compass_aims ... ok
+test src/directional_test.lu::test_pk06_all_directions_stay_separate_through_both_groups ... ok
+test src/glyphs_test.lu::test_glyphs_doc_matches_the_tier ... ok
+test src/glyphs_test.lu::test_plain_tier_needs_no_row ... ok
+test src/grid/grid_test.lu::test_empty_diff_writes_nothing ... ok
+test src/grid/grid_test.lu::test_one_cell_diff ... ok
+test src/grid/grid_test.lu::test_full_repaint_is_contiguous ... ok
+test src/grid/grid_test.lu::test_style_run_sets_sgr_once ... ok
+test src/grid/grid_test.lu::test_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_sixteen_dialect_bright ... ok
+test src/grid/grid_test.lu::test_utf8_lengths ... ok
+test src/grid/grid_test.lu::test_property_apply_diff_equals_next ... ok
+test src/grid/grid_test.lu::test_property_holds_in_the_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_model_wraps_and_scrolls ... ok
+test src/grid/grid_test.lu::test_model_private_modes ... ok
+test src/grid/grid_test.lu::test_model_malformed_utf8 ... ok
+test src/grid/grid_test.lu::test_dump_text_and_styles ... ok
+test src/grid/grid_test.lu::test_plain_ok ... ok
+test src/grid/grid_test.lu::test_bounds_are_soft ... ok
+test src/input/input_test.lu::test_csi_arrows ... ok
+test src/input/input_test.lu::test_ss3_arrows ... ok
+test src/input/input_test.lu::test_shift_arrows_are_their_own_keys ... ok
+test src/input/input_test.lu::test_other_modifiers_are_the_bare_arrow ... ok
+test src/input/input_test.lu::test_plain_keys ... ok
+test src/input/input_test.lu::test_lone_esc_waits_for_the_timeout ... ok
+test src/input/input_test.lu::test_esc_then_bracket_late_is_still_a_sequence ... ok
+test src/input/input_test.lu::test_esc_then_plain_byte_is_esc_and_the_byte ... ok
+test src/input/input_test.lu::test_ignored_forms ... ok
+test src/input/input_test.lu::test_unknown_bytes_are_dropped_and_counted ... ok
+test src/input/input_test.lu::test_two_sequences_in_one_read ... ok
+test src/input/input_test.lu::test_a_tap_holds_for_the_tap_ticks ... ok
+test src/input/input_test.lu::test_a_repeat_run_releases_one_interval_after_the_last_press ... ok
+test src/input/input_test.lu::test_kitty_printable_low_matrix ... ok
+test src/input/input_test.lu::test_kitty_printable_high_matrix ... ok
+test src/input/input_test.lu::test_kitty_special_matrix ... ok
+test src/input/input_test.lu::test_kitty_functional_matrix ... ok
+test src/input/input_test.lu::test_kitty_defaults_optional_fields_and_refusals ... ok
+test src/input/input_test.lu::test_exact_down_resumes_after_left_tap ... ok
+test src/input/input_test.lu::test_exact_diagonal_and_ctrl_across_arrows ... ok
+test src/input/input_test.lu::test_registered_key_and_inferred_equivalence ... ok
+test src/replay/replay_test.lu::test_vocabulary ... ok
+test src/replay/replay_test.lu::test_parse_sample ... ok
+test src/replay/replay_test.lu::test_round_trip ... ok
+test src/replay/replay_test.lu::test_refusals ... ok
+test src/replay/replay_test.lu::test_parse_size ... ok
+test src/replay/replay_test.lu::test_start_is_read_written_and_defaults_to_zero ... ok
+test src/replay/replay_test.lu::test_the_score_comment_is_written_read_and_optional ... ok
+test src/sim_test.lu::test_two_runs_are_one ... ok
+test src/sim_test.lu::test_trot_advances_at_v ... ok
+test src/sim_test.lu::test_sprint_is_bounded_and_drains ... ok
+test src/sim_test.lu::test_speed_never_jumps ... ok
+test src/sim_test.lu::test_stop_regenerates_fastest ... ok
+test src/sim_test.lu::test_exhaustion_pants_and_recovers ... ok
+test src/sim_test.lu::test_bands_follow_stamina ... ok
+test src/sim_test.lu::test_turn_rate_bounds_the_heading_change ... ok
+test src/sim_test.lu::test_a_tap_holds_for_the_tap_ticks ... ok
+test src/sim_test.lu::test_a_held_run_releases_within_the_interval_and_margin ... ok
+test src/sim_test.lu::test_both_steer_keys_held_cancel ... ok
+test src/sim_test.lu::test_speed_scale_scales_the_trot ... ok
+test src/sim_test.lu::test_steering_moves_the_pack_sideways ... ok
+test src/sim_test.lu::test_the_turn_ripples_back_through_the_pack ... ok
+test src/sim_test.lu::test_bodies_never_overlap ... ok
+test src/sim_test.lu::test_the_pack_bumps_and_wanders ... ok
+test src/sim_test.lu::test_forest_edge_slows_and_scratches ... ok
+test src/sim_test.lu::test_health_floors_faint_the_farthest_and_recovery_returns ... ok
+test src/sim_test.lu::test_return_speed_is_the_sprint ... ok
+test src/sim_test.lu::test_health_slows_the_gait ... ok
+test src/sim_test.lu::test_resize_keeps_the_path_position ... ok
+test src/sim_test.lu::test_world_rows_lead_ahead ... ok
+test src/sim_test.lu::test_spawn_rate_is_the_worlds_at_the_alphas_row ... ok
+test src/sim_test.lu::test_spawn_roll_is_the_seeds_and_groups_above_the_rate ... ok
+test src/sim_test.lu::test_shadows_spawn_at_the_edge_ahead_from_the_seed ... ok
+test src/sim_test.lu::test_a_lurker_perceives_within_the_radius_and_not_beyond ... ok
+test src/sim_test.lu::test_pk07_a_forest_edge_lurker_sees_across_a_wide_path ... ok
+test src/sim_test.lu::test_a_passed_shadow_decelerates_turns_at_rest_and_chases_at_1_3_v ... ok
+test src/sim_test.lu::test_a_sprint_shakes_a_chaser_a_trot_does_not ... ok
+test src/sim_test.lu::test_a_shaken_shadow_is_gone_behind_the_alpha ... ok
+test src/sim_test.lu::test_bodies_never_overlap_with_shadows ... ok
+test src/sim_test.lu::test_group_attack_lands_damage_per_shadow_a_lone_one_less ... ok
+test src/sim_test.lu::test_leap_vanquishes_in_reach_costs_stamina_and_fades ... ok
+test src/sim_test.lu::test_the_spent_pack_cannot_leap ... ok
+test src/sim_test.lu::test_a_parry_turns_a_landing_attack ... ok
+test src/sim_test.lu::test_a_parry_is_a_press_not_a_stance ... ok
+test src/sim_test.lu::test_death_at_zero_health_on_the_next_landed_attack_freezes_the_run ... ok
+test src/sim_test.lu::test_shadow_eyes_dim_pulse_steady ... ok
+test src/sim_test.lu::test_deer_roll_is_the_seeds_and_rarer_than_the_shadows ... ok
+test src/sim_test.lu::test_deer_spawn_on_the_path_ahead_from_the_seed ... ok
+test src/sim_test.lu::test_a_deer_wanders_at_the_walk_beyond_perception ... ok
+test src/sim_test.lu::test_a_deer_flees_at_1_5_v_away_from_the_pack_under_the_bars ... ok
+test src/sim_test.lu::test_a_tired_deer_slows_below_the_trot_and_recovers_walking ... ok
+test src/sim_test.lu::test_a_caught_deer_feeds_the_pack_and_a_wolf_returns ... ok
+test src/sim_test.lu::test_bodies_never_overlap_with_deer ... ok
+test src/sim_test.lu::test_a_deer_far_behind_or_far_ahead_is_gone ... ok
+test src/sim_test.lu::test_the_curve_is_gentle_first_then_groups_then_a_ceiling ... ok
+test src/sim_test.lu::test_deer_rate_follows_the_curve_and_the_clearings ... ok
+test src/sim_test.lu::test_a_spawn_lurks_on_the_outside_of_the_bend ... ok
+test src/sim_test.lu::test_the_phase_follows_the_distance_slowly ... ok
+test src/sim_test.lu::test_a_run_can_start_up_the_path ... ok
+test src/sim_test.lu::test_pk04_speed_preserves_the_maintainers_ticks_and_wear_down ... ok
+test src/sim_test.lu::test_pk04_detection_cone_contact_and_outward_spawn_bands ... ok
+test src/sim_test.lu::test_pk04_detection_considers_every_visible_wolf ... ok
+test src/sim_test.lu::test_pk04_pack_leap_alternates_moves_and_holds_formation ... ok
+test src/sim_test.lu::test_pk04_shared_arc_is_bounded_out_and_back ... ok
+test src/sim_test.lu::test_pk04_shadow_lunge_has_six_crouch_ticks_and_six_travelling_ticks ... ok
+test src/sim_test.lu::test_pk04_fixed_offset_parry_is_turned_at_the_landing ... ok
+test src/sim_test.lu::test_pk04_all_animated_bodies_stay_separate_in_a_fight_and_resize ... ok
+test src/sim_test.lu::test_pk04_actual_stop_and_restart_keep_five_and_ten_ticks ... ok
+test src/sim_test.lu::test_pk04_re_recorded_terminal_replays_verify_their_scores ... ok
+test src/sim_test.lu::test_pk08_first_lone_spawn_is_bounded_for_every_seed ... ok
+test src/sim_test.lu::test_pk08_spawn_gap_and_no_groups_in_first_minute ... ok
+test src/sim_test.lu::test_pk08_deer_bonus_zero_at_full_and_capped ... ok
+test src/sim_test.lu::test_pk08_full_health_deer_birth_timeline_matches_legacy ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_1_10 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_11_20 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_21_30 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_31_40 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_41_50 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_51_60 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_61_70 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_71_80 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_81_90 ... ok
+test src/sim_test.lu::test_pk08_clump_cap_seeds_91_100 ... ok
+test src/sprites_test.lu::test_plain_tier_keeps_its_promise ... ok
+test src/sprites_test.lu::test_rich_tier_colours_are_indices ... ok
+test src/sprites_test.lu::test_wolf_sprites_sit_on_the_path ... ok
+test src/sprites_test.lu::test_posture_glyphs_differ_by_band ... ok
+test src/sprites_test.lu::test_shadow_variants_eyes_and_fade ... ok
+test src/sprites_test.lu::test_card_cells_need_no_font_row ... ok
+test src/sprites_test.lu::test_the_rich_palette_blends_from_afternoon_to_night_with_the_eyes_fixed ... ok
+test src/sprites_test.lu::test_the_plain_palette_steps_and_keeps_its_promise_at_night ... ok
+test src/trail_test.lu::test_path_in_range_and_continuous ... ok
+test src/trail_test.lu::test_seeds_differ_in_their_paths ... ok
+test src/trail_test.lu::test_density_widens_the_path_in_a_clearing_and_raises_the_rate ... ok
+test src/trail_test.lu::test_the_curve_holds_the_ramp_and_the_ceiling ... ok
+test src/world/world_test.lu::test_deterministic ... ok
+test src/world/world_test.lu::test_seeds_differ ... ok
+test src/world/world_test.lu::test_noise_bounds_and_continuity ... ok
+test src/world/world_test.lu::test_forest_density_rises ... ok
+test src/world/world_test.lu::test_clearing_reads_and_a_stand_is_the_woods_with_more_trunks ... ok
+test src/world/world_test.lu::test_density_bands_are_ordered ... ok
+test src/world/world_test.lu::test_hash_range ... ok
+wolf test: 183 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+build: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+build: target/native/pack
+build: target/release/pack
+selftest: ok (the decoder table whole and split at every byte; the diff property over 12 frames)
+goldens: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+goldens: aim-e-rich ok
+goldens: aim-e-plain ok
+goldens: aim-n-rich ok
+goldens: aim-n-plain ok
+goldens: aim-ne-rich ok
+goldens: aim-ne-plain ok
+goldens: aim-nw-rich ok
+goldens: aim-nw-plain ok
+goldens: aim-s-rich ok
+goldens: aim-s-plain ok
+goldens: aim-se-rich ok
+goldens: aim-se-plain ok
+goldens: aim-sw-rich ok
+goldens: aim-sw-plain ok
+goldens: aim-up-rich ok
+goldens: aim-up-plain ok
+goldens: aim-w-rich ok
+goldens: aim-w-plain ok
+goldens: aim-window-ne-right-up-rich ok
+goldens: aim-window-ne-right-up-plain ok
+goldens: aim-window-ne-up-right-rich ok
+goldens: aim-window-ne-up-right-plain ok
+goldens: aim-window-nw-left-up-rich ok
+goldens: aim-window-nw-left-up-plain ok
+goldens: aim-window-nw-up-left-rich ok
+goldens: aim-window-nw-up-left-plain ok
+goldens: aim-window-se-down-right-rich ok
+goldens: aim-window-se-down-right-plain ok
+goldens: aim-window-se-right-down-rich ok
+goldens: aim-window-se-right-down-plain ok
+goldens: aim-window-sw-down-left-rich ok
+goldens: aim-window-sw-down-left-plain ok
+goldens: aim-window-sw-left-down-rich ok
+goldens: aim-window-sw-left-down-plain ok
+goldens: alternating-leap-rich ok
+goldens: alternating-leap-plain ok
+goldens: clearing-rich ok
+goldens: clearing-plain ok
+goldens: death-card-rich ok
+goldens: death-card-plain ok
+goldens: deer-flee-rich ok
+goldens: deer-flee-plain ok
+goldens: dense-stand-rich ok
+goldens: dense-stand-plain ok
+goldens: dusk-early-rich ok
+goldens: dusk-early-plain ok
+goldens: dusk-rich ok
+goldens: dusk-plain ok
+goldens: faint-return-rich ok
+goldens: faint-return-plain ok
+goldens: formation-turn-rich ok
+goldens: formation-turn-plain ok
+goldens: group-attack-rich ok
+goldens: group-attack-plain ok
+goldens: leap-lands-rich ok
+goldens: leap-lands-plain ok
+goldens: night-rich ok
+goldens: night-plain ok
+goldens: parry-turns-rich ok
+goldens: parry-turns-plain ok
+goldens: resize-rich ok
+goldens: resize-plain ok
+goldens: shadow-lunge-rich ok
+goldens: shadow-lunge-plain ok
+goldens: spawn-chase-rich ok
+goldens: spawn-chase-plain ok
+goldens: sprint-exhaust-rich ok
+goldens: sprint-exhaust-plain ok
+goldens: standstill-rich ok
+goldens: standstill-plain ok
+goldens: steer-forest-rich ok
+goldens: steer-forest-plain ok
+goldens: trot-rich ok
+goldens: trot-plain ok
+goldens: wide-rich ok
+goldens: wide-plain ok
+goldens: art ok
+pty: quit ok (linux x86_64, exit 0, 104281 bytes captured)
+pty: ctrl-c ok (linux x86_64, exit 0, 104281 bytes captured)
+pty: trap ok (linux x86_64, exit 134, 82839 bytes captured)
+pty: agree-rich ok (linux x86_64, exit 0, 353486 bytes captured)
+pty: agree-plain ok (linux x86_64, exit 0, 194867 bytes captured)
+pty: held-run ok (linux x86_64, exit 0, 516277 bytes captured; 30 sequences typed, last key at tick 55, peak |heading| 48, straight at 60, column at rest at 59)
+pty: card ok (linux x86_64, exit 0, 2548192 bytes captured; death in the trace, 11 events saved, last tick 922, re-run twice identical)
+pty: title ok (linux x86_64, exit 0, 5299253 bytes captured; score 179; 3 closing lines; best file written)
+pty: directional-chords ok (linux x86_64, exit 0, 56880 bytes captured; 18 fresh terminal sessions: default plus eight held aims, both tiers)
+pty: aim-window ok (linux x86_64, exit 0, 56699 bytes captured; 58 timed sessions; accepted Space/held/aim rows at /work/target/pty/aim-window.txt)
+check-linux: green

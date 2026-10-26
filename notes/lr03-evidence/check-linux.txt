@@ -1,0 +1,135 @@
+check-fmt: canonical
+test src/clock/clock_test.lu::test_no_tick_before_its_time ... ok
+test src/clock/clock_test.lu::test_one_tick_on_time ... ok
+test src/clock/clock_test.lu::test_late_frames_drop_renders_not_ticks ... ok
+test src/clock/clock_test.lu::test_ms_until_rounds_up ... ok
+test src/clock/clock_test.lu::test_thirty_ticks_a_second ... ok
+test src/draw_test.lu::test_put_text_keeps_bytes_and_takes_the_style ... ok
+test src/draw_test.lu::test_frame_and_fill ... ok
+test src/draw_test.lu::test_blit_skips_spaces ... ok
+test src/draw_test.lu::test_fitting ... ok
+test src/grid/grid_test.lu::test_empty_diff_writes_nothing ... ok
+test src/grid/grid_test.lu::test_one_cell_diff ... ok
+test src/grid/grid_test.lu::test_full_repaint_is_contiguous ... ok
+test src/grid/grid_test.lu::test_style_run_sets_sgr_once ... ok
+test src/grid/grid_test.lu::test_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_sixteen_dialect_bright ... ok
+test src/grid/grid_test.lu::test_utf8_lengths ... ok
+test src/grid/grid_test.lu::test_property_apply_diff_equals_next ... ok
+test src/grid/grid_test.lu::test_property_holds_in_the_rgb_dialect ... ok
+test src/grid/grid_test.lu::test_model_wraps_and_scrolls ... ok
+test src/grid/grid_test.lu::test_model_private_modes ... ok
+test src/grid/grid_test.lu::test_model_malformed_utf8 ... ok
+test src/grid/grid_test.lu::test_dump_text_and_styles ... ok
+test src/grid/grid_test.lu::test_plain_ok ... ok
+test src/grid/grid_test.lu::test_bounds_are_soft ... ok
+test src/headless_test.lu::test_pad4 ... ok
+test src/headless_test.lu::test_apply_reads_a_frame_back ... ok
+test src/headless_test.lu::test_diff_property_holds ... ok
+test src/input/input_test.lu::test_csi_arrows ... ok
+test src/input/input_test.lu::test_ss3_arrows ... ok
+test src/input/input_test.lu::test_shift_arrows_are_their_own_keys ... ok
+test src/input/input_test.lu::test_other_modifiers_are_the_bare_arrow ... ok
+test src/input/input_test.lu::test_plain_keys ... ok
+test src/input/input_test.lu::test_lone_esc_waits_for_the_timeout ... ok
+test src/input/input_test.lu::test_esc_then_bracket_late_is_still_a_sequence ... ok
+test src/input/input_test.lu::test_esc_then_plain_byte_is_esc_and_the_byte ... ok
+test src/input/input_test.lu::test_ignored_forms ... ok
+test src/input/input_test.lu::test_unknown_bytes_are_dropped_and_counted ... ok
+test src/input/input_test.lu::test_two_sequences_in_one_read ... ok
+test src/input/input_test.lu::test_a_tap_holds_for_the_tap_ticks ... ok
+test src/input/input_test.lu::test_a_repeat_run_releases_one_interval_after_the_last_press ... ok
+test src/input/input_test.lu::test_kitty_printable_low_matrix ... ok
+test src/input/input_test.lu::test_kitty_printable_high_matrix ... ok
+test src/input/input_test.lu::test_kitty_special_matrix ... ok
+test src/input/input_test.lu::test_kitty_functional_matrix ... ok
+test src/input/input_test.lu::test_kitty_defaults_optional_fields_and_refusals ... ok
+test src/input/input_test.lu::test_exact_down_resumes_after_left_tap ... ok
+test src/input/input_test.lu::test_exact_diagonal_and_ctrl_across_arrows ... ok
+test src/input/input_test.lu::test_registered_key_and_inferred_equivalence ... ok
+test src/probe_test.lu::test_hex4 ... ok
+test src/probe_test.lu::test_cpr_col ... ok
+test src/replay/replay_test.lu::test_vocabulary ... ok
+test src/replay/replay_test.lu::test_parse_sample ... ok
+test src/replay/replay_test.lu::test_round_trip ... ok
+test src/replay/replay_test.lu::test_refusals ... ok
+test src/replay/replay_test.lu::test_parse_size ... ok
+test src/replay/replay_test.lu::test_start_is_read_written_and_defaults_to_zero ... ok
+test src/replay/replay_test.lu::test_the_score_comment_is_written_read_and_optional ... ok
+test src/sound_test.lu::test_sound_reader_timbres ... ok
+test src/sound_test.lu::test_sound_reader_named_refusals ... ok
+test src/sound_test.lu::test_sound_zero_render ... ok
+test src/sound_test.lu::test_sound_wav_and_oss ... ok
+test src/sound_test.lu::test_sound_cues_replay_fades_and_capacity ... ok
+test src/sound_test.lu::test_sound_parse_features_and_bounds ... ok
+test src/sound_test.lu::test_sound_short_cue_has_audible_middle ... ok
+test src/term_test.lu::test_query_answer_preserves_input_at_every_split ... ok
+test src/term_test.lu::test_query_ignores_malformed_and_partial_answers ... ok
+test src/term_test.lu::test_minimum_parameters_and_message ... ok
+test src/tier_test.lu::test_detect ... ok
+test src/tier_test.lu::test_names_round_trip ... ok
+test src/tier_test.lu::test_dialects ... ok
+test src/tier_test.lu::test_nearest_index_round_trips_the_cube_and_the_greys ... ok
+test src/tier_test.lu::test_blend_holds_its_ends_and_steps_between ... ok
+test src/world/world_test.lu::test_deterministic ... ok
+test src/world/world_test.lu::test_seeds_differ ... ok
+test src/world/world_test.lu::test_noise_bounds_and_continuity ... ok
+test src/world/world_test.lu::test_forest_density_rises ... ok
+test src/world/world_test.lu::test_clearing_reads_and_a_stand_is_the_woods_with_more_trunks ... ok
+test src/world/world_test.lu::test_density_bands_are_ordered ... ok
+test src/world/world_test.lu::test_hash_range ... ok
+wolf test: 79 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+build: target/native/lair
+build: target/release/lair
+sound-golden den/native ok 4b9bd3308dcdccaa1967161d59e0e29f9e8e8ea0912213c5206f607333785c51
+sound-golden chase/native ok 5f410524f659dcf3a6b0c33e3fd3fad39c38cc7e213cdb9c85a22c6c354dcf69
+sound-golden replay/native/1 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+sound-golden replay/native/2 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+native sound-frame enabled false avg_us 28 max_us 116 checksum 2677
+native sound-frame enabled true avg_us 160 max_us 350 checksum 14061
+sound-golden den/release ok 4b9bd3308dcdccaa1967161d59e0e29f9e8e8ea0912213c5206f607333785c51
+sound-golden chase/release ok 5f410524f659dcf3a6b0c33e3fd3fad39c38cc7e213cdb9c85a22c6c354dcf69
+sound-golden replay/release/1 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+sound-golden replay/release/2 ok e5c4c2e4e5c398991396f8999a871ba18e55600ea9c6fd79ef521be14ff86893
+release sound-frame enabled false avg_us 20 max_us 60 checksum 2677
+release sound-frame enabled true avg_us 72 max_us 251 checksum 14061
+sound-idle off 90 wakes / 3s ok
+sound-latency off median 33.14 p90 34.11 max 34.17 ms (bars 40/70)
+sound-restore off q and ctrl-c ok
+sound-idle on 90 wakes / 3s ok
+sound-latency on median 33.20 p90 33.28 max 34.22 ms (bars 40/70)
+sound-restore on q and ctrl-c ok
+sound-output Linux named paplay refusal exercised (no device assumed)
+sound-check: green
+input-pty native/normal kitty ok
+input-pty native/ctrl-c kitty ok
+input-pty native/crash kitty ok
+input-pty native/error kitty ok
+input-pty native/stream kitty ok
+input-pty native/normal fallback ok
+input-pty native/legacy fallback ok
+input-pty native/small kitty ok
+input-pty native/resize kitty ok
+input-minimum native small 39x12 refused ok
+input-minimum native small 40x11 refused ok
+input-minimum native normal 40x12 refused ok
+input-pty release/normal kitty ok
+input-pty release/ctrl-c kitty ok
+input-pty release/crash kitty ok
+input-pty release/error kitty ok
+input-pty release/stream kitty ok
+input-pty release/normal fallback ok
+input-pty release/legacy fallback ok
+input-pty release/small kitty ok
+input-pty release/resize kitty ok
+input-minimum release small 39x12 refused ok
+input-minimum release small 40x11 refused ok
+input-minimum release normal 40x12 refused ok
+keyprobe legacy restored ok
+keyprobe kitty restored ok
+selftest: 1980 kitty event rows, every byte split
+selftest: ok (the decoder table whole and split at every byte; the diff property over 12 frames)
+selftest: 1980 kitty event rows, every byte split
+selftest: ok (the decoder table whole and split at every byte; the diff property over 12 frames)
+check-linux: green

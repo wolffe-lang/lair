@@ -1,0 +1,59 @@
+x86_64-unknown-linux-gnu wolf=4cc4045bbbb605c07835bc4f32685953c784eeef4cd3139a48b457dfc90dad1a lupin=ad703550ac4787e8e4bb26989d591a731410274d7332f2b4e8b9a64c878822cc std=2386522eb059cca5a84108562c2c0a0e72345d34
+wolf 0.2.35 (wolfgang, pin cf0c13d)
+paired with lupin 0.1.56 (reference interpreter), pin 294d626
+lupin 0.1.56 (wolf-interp, reference interpreter at pin 294d626)
+Linux x86_64
+pid 1's current affinity list: 6-11
+12884901888
+=== pack 278480955f7c088b40b9f2cdd57565ece8f4a865
+golden files: 2124
+successful golden comparisons (including art): 77
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin aa6c4dc0bc5071d3c07121451d913a8837cd2a6a
+wolf test: 183 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+check-linux: green
+=== cub 8fed72893efd10a30db76c99c8d233f31a1ffe3d
+golden files: 2471
+successful golden comparisons (including art): 163
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+wolf test: 240 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+check-linux: green
+=== trail 59050227e82d7d97401f4747207c0acef9e99afd
+golden files: 558
+successful golden comparisons (including art): 83
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+wolf test: 85 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+check-linux: green
+=== fugue 39464a18974a655c599430f94a9a4ca99ae8f00a
+golden files: 1299
+successful golden comparisons (including art): 85
+check-linux: the engine is NOT the pinned one (LAIR_UNPINNED=1): have 94c7e67, lair.pin 57870143ebbb4806b8bee40379e8c6e781f50842
+wolf test: 117 passed; 0 failed; 0 rejected; 0 unsupported; 0 filtered out
+test: 0 SKIP lines
+check-linux: green
+
+Final source under test: 4868ae8 (all code); docs/README head 94c7e67.
+Hasu recipe: PATH=~/lanes/hasu-env/bin:~/lanes/hasu-env/profile/bin:$PATH;
+flock /home/mfwolffe/lanes/hasu-B.lock env LAIR_CPUS=6-11 tools/in-container tools/check-linux
+The existing in-container runner already supports the rootless wrapper, taskset
+inside the container and --memory 12g. check-linux gained input-check and the
+native event selftest; no host-specific bypass or package install was needed.
+Each consumer used the committed engine tree staged under its own .lair with
+LAIR_UNPINNED=1; no consumer source, fixture, committed pin or remote was edited.
+All consumer golden comparisons are byte comparisons, never regenerated files.
+
+Nomad: 79 checked tests, 0 SKIP; native/release builds and 1980-row event matrices;
+26 actual pty/keyprobe rows (12 per binary tier plus both keyprobe modes), green.
+Each heavy command gated itself on vm_stat free+inactive+speculative >=8 GiB;
+measured 32-33 GiB, no retry needed. Commands in ~/lanes/lr03/mac-final.sh.
+First Mac build failed before any pty row because an rsync of src accidentally
+copied hasu's ignored .lu-cache (ELF objects). Removed only this lane's generated
+src/.lu-cache and rebuilt clean; no source change and no suppression. Future
+source syncs must exclude .lu-cache. Both toolchain release API reads matched;
+fetch-toolchain verified archive digests on each host and binary/std identity.
+
+Matrix: 1980 distinct protocol sequences, 20250 whole/split executions per tier.
+The inferred-model tests and every legacy fixture stay unchanged in behavior.
+No live kitty claim: docs/KEYS.md gives the operator's physical-key witness.
