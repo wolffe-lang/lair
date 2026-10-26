@@ -532,6 +532,7 @@ fn modifier_bit(key: int) -> int {
 /// the existing HOLD_RATE_MAX model, including Ctrl+arrow's modifier bit.
 pub fn update(mut s: KeyState, e: Event, tick: int) {
     if e.kind < PRESS || e.kind > RELEASE { return }
+    if s.negotiated && e.kind == RELEASE { clear(mut s) }
     if s.negotiated { s.modifiers = e.mods }
     var i = 0
     while i < s.slots.len {
