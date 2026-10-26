@@ -94,8 +94,8 @@ fn run_selftest() -> int {
     (mut rows).push("\t|13")
     (mut rows).push("\x1b|9")
     (mut rows).push("\x1b |9 1032")
-    (mut rows).push("\x1b[57;2u|")
-    (mut rows).push("\x1b[5~|")
+    (mut rows).push("\x1b[57;2u|1057")
+    (mut rows).push("\x1b[5~|32")
     (mut rows).push("\x1b[D\x1b[1;2B |3 6 1032")
     for row in rows {
         let (seq, want_raw) = row.split_once("|") else (row, "")

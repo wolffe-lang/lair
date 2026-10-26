@@ -3,26 +3,12 @@
 //! the same as one read (table-tested both ways), and a lone ESC resolved
 //! by a timeout the caller measures, never by a guess.
 //!
-//! The keys are the terminal's, not a game's: the four arrows, the four
-//! Shift+arrows (the modifier form `ESC [ 1 ; m X` with m = 1 + Shift +
-//! 2 Alt + 4 Ctrl, PAX's console and the Linux VT, px59's measurement;
-//! macOS terminals send the same for Shift — any modifier but Shift alone
-//! is read as the bare arrow), Esc (a lone ESC once `ESC_TIMEOUT_MS` passes
-//! with nothing after it), Ctrl-C as a byte (when the terminal passes it as
-//! one; the signal path is the terminal's), Enter, Backspace, Tab, and every
-//! printable byte as a character key (`KEY_CHAR_BASE + b`, `char_of` reads
-//! it back). A game's own vocabulary (pack: Space the leap, `z` the parry,
-//! Shift+Down the parry too, `q` the quit) is its mapping from these, so
-//! two games share one decoder and one table test. The kitty/CSI-u form
-//! `ESC [ code ; mods u` and the tilde form `ESC [ n ~` are recognised and
-//! ignored; an unknown CSI is consumed; any other byte is dropped and
-//! counted in `dropped`. The game's `docs/KEYS.md` has what each terminal
-//! was measured to send.
-//!
-//! **The held-key model** (pack's pk01, the maintainer's R-PK-7 (b)): a
-//! terminal has no key-up, so a held key is an autorepeat run of presses;
-//! `Hold` treats a run as a held state released one repeat interval after
-//! the last press, from ticks alone, so a replay reproduces it.
+//! Legacy feed/feed_all yield compatibility key numbers, never releases.
+//! feed_events/events_all yield physical key, modifier bits and event type.
+//! Kitty protocol: published "Key codes", "Modifiers", "Event types" and
+//! "Functional key definitions"; no terminal implementation was consulted.
+//! Hold keeps the inferred model; KeyState supplies exact per-key views when
+//! the session negotiated report-event-types and report-all-keys (flags 11).
 
 /// No key (never pushed; the zero value).
 pub const KEY_NONE: int = 0
@@ -75,6 +61,75 @@ pub const KEY_CHAR_BASE: int = 1000
 /// The milliseconds after which a lone ESC is Esc.
 pub const ESC_TIMEOUT_MS: int = 50
 
+/// Standalone modifier keys (left and right stay independent).
+pub const KEY_LEFT_SHIFT: int = 20
+
+/// Right shift.
+pub const KEY_RIGHT_SHIFT: int = 21
+
+/// Left ctrl.
+pub const KEY_LEFT_CTRL: int = 22
+
+/// Right ctrl.
+pub const KEY_RIGHT_CTRL: int = 23
+
+/// Left alt.
+pub const KEY_LEFT_ALT: int = 24
+
+/// Right alt.
+pub const KEY_RIGHT_ALT: int = 25
+
+/// Aggregate modifiers, available in the held set on both paths.
+pub const KEY_SHIFT: int = 26
+
+/// Ctrl.
+pub const KEY_CTRL: int = 27
+
+/// Alt.
+pub const KEY_ALT: int = 28
+
+/// Insert.
+pub const KEY_INSERT: int = 30
+
+/// Delete.
+pub const KEY_DELETE: int = 31
+
+/// Page up.
+pub const KEY_PAGE_UP: int = 32
+
+/// Page down.
+pub const KEY_PAGE_DOWN: int = 33
+
+/// Home.
+pub const KEY_HOME: int = 34
+
+/// End.
+pub const KEY_END: int = 35
+
+/// F1 through F12 are KEY_F1 + 0 through 11.
+pub const KEY_F1: int = 40
+
+/// Modifier bit, before the wire encoding adds one.
+pub const MOD_SHIFT: int = 1
+
+/// Modifier bit, before the wire encoding adds one.
+pub const MOD_ALT: int = 2
+
+/// Modifier bit, before the wire encoding adds one.
+pub const MOD_CTRL: int = 4
+
+/// Keyboard event kind from the protocol.
+pub const PRESS: int = 1
+
+/// Keyboard event kind from the protocol.
+pub const REPEAT: int = 2
+
+/// Keyboard event kind from the protocol.
+pub const RELEASE: int = 3
+
+/// Physical key (unshifted), modifier bitfield (not the wire's +1), kind.
+pub struct Event { key: int, mods: int, kind: int }
+
 /// The decoder: the bytes of an unfinished escape sequence and when the
 /// ESC that started it arrived; the bytes dropped and the forms ignored.
 pub struct Decoder {
@@ -82,11 +137,12 @@ pub struct Decoder {
     esc_at_ms: int,
     dropped: int,
     ignored: int,
+    events: List[Event],
 }
 
 /// A fresh decoder.
 pub fn new() -> Decoder {
-    Decoder { pending: List[byte](), esc_at_ms: 0, dropped: 0, ignored: 0 }
+    Decoder { pending: List[byte](), esc_at_ms: 0, dropped: 0, ignored: 0, events: List[Event]() }
 }
 
 /// The character a character key carries, or -1 for a key that is none.
@@ -136,42 +192,96 @@ pub fn arrow_key(final: int, m: int) -> int {
     KEY_NONE
 }
 
-/// Decode a complete CSI sequence `ESC [ params final` held in `pending`
-/// (params as digits and `;`), pushing at most one key.
+fn compatibility_key(e: Event) -> int {
+    if e.key >= KEY_UP && e.key <= KEY_RIGHT && e.mods == MOD_SHIFT {
+        return e.key + 4
+    }
+    if e.key == char_key(99) && e.mods & MOD_CTRL != 0 { return KEY_INTERRUPT }
+    if e.key >= char_key(97) && e.key <= char_key(122) && e.mods & MOD_SHIFT != 0 {
+        return e.key - 32
+    }
+    e.key
+}
+
+fn emit(mut d: Decoder, k: int, mods: int, kind: int, mut keys: List[int]) {
+    let e = Event { key: k, mods: mods, kind: kind }
+    (mut d.events).push(e)
+    if kind != RELEASE { (mut keys).push(compatibility_key(e)) }
+}
+
+fn unicode_key(code: int) -> int {
+    if code == 27 { return KEY_ESC }
+    if code == 57441 { return KEY_LEFT_SHIFT }
+    if code == 57447 { return KEY_RIGHT_SHIFT }
+    if code == 57442 { return KEY_LEFT_CTRL }
+    if code == 57448 { return KEY_RIGHT_CTRL }
+    if code == 57443 { return KEY_LEFT_ALT }
+    if code == 57449 { return KEY_RIGHT_ALT }
+    plain_key(code)
+}
+
+fn functional_key(code: int, final: int) -> int {
+    if final >= 65 && final <= 68 { return arrow_key(final, 1) }
+    if final == 72 { return KEY_HOME }
+    if final == 70 { return KEY_END }
+    if final == 80 { return KEY_F1 }
+    if final == 81 { return KEY_F1 + 1 }
+    if final == 83 { return KEY_F1 + 3 }
+    if final != 126 { return KEY_NONE }
+    if code == 2 { return KEY_INSERT }
+    if code == 3 { return KEY_DELETE }
+    if code == 5 { return KEY_PAGE_UP }
+    if code == 6 { return KEY_PAGE_DOWN }
+    if code == 7 { return KEY_HOME }
+    if code == 8 { return KEY_END }
+    if code >= 11 && code <= 15 { return KEY_F1 + code - 11 }
+    if code >= 17 && code <= 21 { return KEY_F1 + code - 12 }
+    if code == 23 || code == 24 { return KEY_F1 + code - 13 }
+    KEY_NONE
+}
+
+/// Strict bounded decimal fields, optional colon subfields. Alternate keys
+/// and associated text are valid but not requested; the physical key wins.
 fn finish_csi(mut d: Decoder, final: int, mut keys: List[int]) {
-    // Parameters: at most two matter here, `1 ; m` for a modified arrow.
-    var p0 = 0
-    var p1 = 0
-    var n = 0
-    var have = false
+    var code = 0
+    var mods = 1
+    var kind = PRESS
+    var field = 0
+    var sub = 0
+    var value = 0
+    var digits = false
+    var valid = true
     var i = 2
-    while i < d.pending.len - 1 {
+    while i < d.pending.len {
         let b = d.pending[i] as int
         if b >= 48 && b <= 57 {
-            if n == 0 {
-                p0 = p0 * 10 + (b - 48)
-            } else if n == 1 {
-                p1 = p1 * 10 + (b - 48)
+            if value > 111411 || value * 10 + b - 48 > 1114111 { valid = false; break }
+            value = value * 10 + b - 48
+            digits = true
+        } else if b == 59 || b == 58 || i == d.pending.len - 1 {
+            if digits {
+                if field == 0 && sub == 0 { code = value }
+                if field == 1 && sub == 0 { mods = value }
+                if field == 1 && sub == 1 { kind = value }
             }
-            have = true
-        } else if b == 59 {
-            n += 1
+            if field > 2 || field == 1 && sub > 1 { valid = false }
+            if b == 59 { field += 1; sub = 0 }
+            if b == 58 { sub += 1 }
+            value = 0
+            digits = false
+        } else {
+            valid = false
+            break
         }
         i += 1
     }
-    if final >= 65 && final <= 68 {
-        let m = if n >= 1 then p1 else 1
-        if have && n == 0 {
-            // `ESC [ n A` with a count: the bare arrow.
-        }
-        let k = arrow_key(final, m)
-        if k != KEY_NONE {
-            (mut keys).push(k)
-        }
+    if !valid || mods < 1 || mods > 256 || kind < PRESS || kind > RELEASE {
+        d.ignored += 1
         return
     }
-    // CSI-u (kitty), the tilde form and anything else: recognised, ignored.
-    d.ignored += 1
+    let key = if final == 117 then unicode_key(code) else functional_key(code, final)
+    if key == KEY_NONE { d.ignored += 1; return }
+    emit(mut d, key, mods - 1, kind, mut keys)
 }
 
 /// Feed one byte at `now_ms` (any monotonic millisecond count; it only
@@ -187,6 +297,7 @@ fn finish_csi(mut d: Decoder, final: int, mut keys: List[int]) {
 /// wolf-lang issue named in pack's `notes/pk00-the-engine.md` is answered;
 /// the loop shape is kept because it needs no recursion.
 pub fn feed(mut d: Decoder, b: byte, now_ms: int, mut keys: List[int]) {
+    (mut d.events).reset()
     let v = b as int
     var again = true
     while again {
@@ -199,7 +310,7 @@ pub fn feed(mut d: Decoder, b: byte, now_ms: int, mut keys: List[int]) {
             }
             let k = plain_key(v)
             if k != KEY_NONE {
-                (mut keys).push(k)
+                emit(mut d, k, 0, PRESS, mut keys)
             } else {
                 d.dropped += 1
             }
@@ -218,7 +329,7 @@ pub fn feed(mut d: Decoder, b: byte, now_ms: int, mut keys: List[int]) {
                 d.esc_at_ms = now_ms
                 return
             }
-            (mut keys).push(KEY_ESC)
+            emit(mut d, KEY_ESC, 0, PRESS, mut keys)
             again = true
             continue
         }
@@ -227,7 +338,7 @@ pub fn feed(mut d: Decoder, b: byte, now_ms: int, mut keys: List[int]) {
             (mut d.pending).reset()
             let k = arrow_key(v, 1)
             if k != KEY_NONE {
-                (mut keys).push(k)
+                emit(mut d, k, 0, PRESS, mut keys)
             } else {
                 d.ignored += 1
             }
@@ -268,10 +379,30 @@ pub fn feed_all(mut d: Decoder, bytes: List[byte], now_ms: int, mut keys: List[i
 /// `ESC_TIMEOUT_MS` have passed since it arrived, it is Esc (`KEY_ESC`).
 /// Called once a tick with the clock's time; never guesses earlier.
 pub fn flush(mut d: Decoder, now_ms: int, mut keys: List[int]) {
+    (mut d.events).reset()
     if d.pending.len == 1 && now_ms - d.esc_at_ms >= ESC_TIMEOUT_MS {
         (mut d.pending).reset()
-        (mut keys).push(KEY_ESC)
+        emit(mut d, KEY_ESC, 0, PRESS, mut keys)
     }
+}
+
+/// Feed one byte and append every event, including releases, to out.
+pub fn feed_events(mut d: Decoder, b: byte, now_ms: int, mut out: List[Event]) {
+    var ignored = List[int]()
+    feed(mut d, b, now_ms, mut ignored)
+    for e in d.events { (mut out).push(e) }
+}
+
+/// Decode a byte chunk into press, repeat and release events.
+pub fn events_all(mut d: Decoder, bytes: List[byte], now_ms: int, mut out: List[Event]) {
+    for b in bytes { feed_events(mut d, b, now_ms, mut out) }
+}
+
+/// Resolve a pending lone legacy Escape into an event.
+pub fn flush_events(mut d: Decoder, now_ms: int, mut out: List[Event]) {
+    var ignored = List[int]()
+    flush(mut d, now_ms, mut ignored)
+    for e in d.events { (mut out).push(e) }
 }
 
 /// Whether a lone ESC is waiting on its timeout (the loop may shorten its
