@@ -1,26 +1,108 @@
 #!/usr/bin/env python3
-"""tools/keyprobe — what does this terminal send? Raw mode, every key's
-bytes printed in hex and as an escaped string, `q` to finish (the terminal
-restored). Run it in Terminal.app, iTerm2, a Linux VT or PAX's console and
-paste the lines into docs/KEYS.md with the date. No dependency: python3.
+"""Raw bytes by default; --kitty queries, enables flags 11, prints key events
+and the exact held set. q or Ctrl-C finishes, and finally restores the stack
+and termios. Only the published kitty protocol is used, not terminal source.
 """
-import os, sys, termios, tty, select
+import argparse
+import os
+import re
+import select
+import sys
+import termios
+import time
+import tty
 
-fd = sys.stdin.fileno()
-saved = termios.tcgetattr(fd)
-print("keyprobe: press keys; q finishes. TERM=%s" % os.environ.get("TERM", "?"))
-try:
-    tty.setraw(fd)
-    while True:
-        data = os.read(fd, 64)
-        # A lone ESC against a sequence: wait 50 ms for more bytes.
-        while data == b"\x1b" or (data.startswith(b"\x1b") and select.select([fd], [], [], 0.05)[0]):
-            data += os.read(fd, 64)
-            if not select.select([fd], [], [], 0.05)[0]:
+QUERY, PUSH, POP = b"\x1b[?u", b"\x1b[>11u", b"\x1b[<u"
+ANSWER = re.compile(rb"\x1b\[\?[0-9]{1,9}u")
+EVENT = re.compile(rb"\x1b\[([0-9:;]*)([uABCDHF~PQS])")
+NAMES = {13: "Enter", 27: "Esc", 9: "Tab", 127: "Backspace", 32: "Space",
+         57441: "LeftShift", 57447: "RightShift", 57442: "LeftCtrl",
+         57448: "RightCtrl", 57443: "LeftAlt", 57449: "RightAlt"}
+ARROWS = {b"A": "Up", b"B": "Down", b"C": "Right", b"D": "Left", b"H": "Home", b"F": "End",
+          b"P": "F1", b"Q": "F2", b"S": "F4"}
+TILDE = {2: "Insert", 3: "Delete", 5: "PageUp", 6: "PageDown", 7: "Home", 8: "End",
+         **dict(zip([11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 23, 24], ["F%d" % n for n in range(1, 13)]))}
+
+
+def show(text):
+    sys.stdout.write(text + "\r\n")
+    sys.stdout.flush()
+
+
+def decode(data):
+    match = EVENT.fullmatch(data)
+    if not match:
+        return None
+    fields = match[1].split(b";")
+    code = int(fields[0].split(b":")[0] or b"1")
+    modifier = fields[1].split(b":") if len(fields) > 1 else [b"1"]
+    mods = int(modifier[0] or b"1") - 1
+    kind = int(modifier[1] or b"1") if len(modifier) > 1 else 1
+    if mods not in range(256) or kind not in (1, 2, 3):
+        return None
+    final = match[2]
+    key = NAMES.get(code, chr(code) if 32 <= code <= 126 else "code=%d" % code) if final == b"u" else (
+        TILDE.get(code, "tilde=%d" % code) if final == b"~" else ARROWS[final])
+    return key, mods, kind
+
+
+def main():
+    args = argparse.ArgumentParser(description=__doc__)
+    args.add_argument("--kitty", action="store_true")
+    options = args.parse_args()
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    pushed = False
+    pending = b""
+    held = set()
+    show("keyprobe: q / Ctrl-C finishes; TERM=%s" % os.environ.get("TERM", "?"))
+    try:
+        tty.setraw(fd)
+        if options.kitty:
+            os.write(sys.stdout.fileno(), QUERY)
+            deadline = time.monotonic() + .150
+            while time.monotonic() < deadline and len(pending) < 4096:
+                if not select.select([fd], [], [], max(0, deadline - time.monotonic()))[0]:
+                    break
+                pending += os.read(fd, 256)
+                answer = ANSWER.search(pending)
+                if answer:
+                    pending = pending[:answer.start()] + pending[answer.end():]
+                    pushed = True
+                    os.write(sys.stdout.fileno(), PUSH)
+                    break
+            show("exact=%s; flags=%s" % (str(pushed).lower(), "11" if pushed else "unchanged (no answer in 150ms)"))
+        while True:
+            if not pending:
+                pending = os.read(fd, 256)
+                if not pending:
+                    break
+            # Accumulate a split CSI; retain all trailing events for the next pass.
+            match = re.match(rb"\x1b\[[0-?]*[ -/]*[@-~]", pending)
+            if pending.startswith(b"\x1b") and not match and select.select([fd], [], [], .05)[0]:
+                pending += os.read(fd, 256)
+                continue
+            n = match.end() if match else 1
+            raw, pending = pending[:n], pending[n:]
+            event = decode(raw)
+            show("%-32s %r" % (" ".join("%02X" % b for b in raw), raw))
+            if event:
+                key, mods, kind = event
+                if pushed:
+                    if kind == 3:
+                        held.discard(key)
+                    else:
+                        held.add(key)
+                show("%s key=%s mods=%d held=%s" % ({1: "press", 2: "repeat", 3: "release"}[kind], key, mods, sorted(held)))
+                if kind != 3 and (key in ("q", "Q") or key == "c" and mods & 4):
+                    break
+            elif raw in (b"q", b"Q", b"\x03"):
                 break
-        sys.stdout.write("%-24s %r\r\n" % (" ".join("%02X" % b for b in data), data))
-        sys.stdout.flush()
-        if data in (b"q", b"Q"):
-            break
-finally:
-    termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+    finally:
+        if pushed:
+            os.write(sys.stdout.fileno(), POP)
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+
+
+if __name__ == "__main__":
+    main()

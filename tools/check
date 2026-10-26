@@ -13,6 +13,8 @@ cd "$GAME_ROOT"
 "$LAIR_ROOT/tools/build" --all
 if [ "$GAME_ROOT" = "$LAIR_ROOT" ]; then
     python3 -I "$LAIR_ROOT/tools/sound-check"
+    python3 -I "$LAIR_ROOT/tools/input-check"
+    "target/native/$GAME" --selftest
 fi
 "target/release/$GAME" --selftest
 if [ "$GAME_ROOT" != "$LAIR_ROOT" ]; then

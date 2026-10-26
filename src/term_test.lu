@@ -29,3 +29,15 @@ fn test_query_ignores_malformed_and_partial_answers() {
         assert(!term.take_answer(mut pending) && pending.len == text.len, "not an answer: {text}")
     }
 }
+
+fn test_minimum_parameters_and_message() {
+    let rejected = term.open_min(0, 12) else |e| {
+        assert("{e}" == "small", "nonpositive floor rejected before IO")
+        assert(
+            term.message_min("small", "test", 40, 12).contains("40x12"),
+            "configured floor in message",
+        )
+        return
+    }
+    assert(rejected.cols == -1, "invalid floor must not open")
+}

@@ -138,11 +138,19 @@ pub struct Decoder {
     dropped: int,
     ignored: int,
     events: List[Event],
+    event_mode: bool,
 }
 
 /// A fresh decoder.
 pub fn new() -> Decoder {
-    Decoder { pending: List[byte](), esc_at_ms: 0, dropped: 0, ignored: 0, events: List[Event]() }
+    Decoder {
+        pending: List[byte](),
+        esc_at_ms: 0,
+        dropped: 0,
+        ignored: 0,
+        events: List[Event](),
+        event_mode: false,
+    }
 }
 
 /// The character a character key carries, or -1 for a key that is none.
@@ -243,6 +251,7 @@ fn functional_key(code: int, final: int) -> int {
 /// Strict bounded decimal fields, optional colon subfields. Alternate keys
 /// and associated text are valid but not requested; the physical key wins.
 fn finish_csi(mut d: Decoder, final: int, mut keys: List[int]) {
+    if !d.event_mode && (final < 65 || final > 68) { d.ignored += 1; return }
     var code = 0
     var mods = 1
     var kind = PRESS
@@ -389,7 +398,9 @@ pub fn flush(mut d: Decoder, now_ms: int, mut keys: List[int]) {
 /// Feed one byte and append every event, including releases, to out.
 pub fn feed_events(mut d: Decoder, b: byte, now_ms: int, mut out: List[Event]) {
     var ignored = List[int]()
+    d.event_mode = true
     feed(mut d, b, now_ms, mut ignored)
+    d.event_mode = false
     for e in d.events { (mut out).push(e) }
 }
 

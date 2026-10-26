@@ -1,0 +1,120 @@
+fn proof_event(s: str, key: int, mods: int, kind: int) {
+    var split = 0
+    while split <= s.len {
+        var d = new()
+        var events = List[Event]()
+        var i = 0
+        while i < s.len {
+            feed_events(mut d, s.bytes()[i], if i < split then 1000 else 1010, mut events)
+            i += 1
+        }
+        assert(events.len == 1, "one event: {s}, split {split}: {events.len}")
+        assert(
+            events[0].key == key && events[0].mods == mods && events[0].kind == kind,
+            "event values: {s}, split {split}: {events[0]}",
+        )
+        split += 1
+    }
+}
+
+fn proof_kitty_printable_matrix_every_split(first: int, last: int) {
+    var code = first
+    while code <= last {
+        var kind = PRESS
+        while kind <= RELEASE {
+            for mods in [0, MOD_SHIFT, MOD_ALT, MOD_CTRL, MOD_SHIFT | MOD_CTRL] {
+                proof_event("\x1b[{code};{mods + 1}:{kind}u", char_key(code), mods, kind)
+            }
+            kind += 1
+        }
+        code += 1
+    }
+}
+
+fn proof_kitty_special_matrix_every_split() {
+    let codes = [13, 27, 9, 127, 57441, 57447, 57442, 57448, 57443, 57449]
+    let keys = [
+        KEY_ENTER,
+        KEY_ESC,
+        KEY_TAB,
+        KEY_BACKSPACE,
+        KEY_LEFT_SHIFT,
+        KEY_RIGHT_SHIFT,
+        KEY_LEFT_CTRL,
+        KEY_RIGHT_CTRL,
+        KEY_LEFT_ALT,
+        KEY_RIGHT_ALT,
+    ]
+    var n = 0
+    while n < codes.len {
+        for kind in [PRESS, REPEAT, RELEASE] {
+            for mods in [0, MOD_SHIFT, MOD_ALT, MOD_CTRL, MOD_SHIFT | MOD_CTRL] {
+                proof_event("\x1b[{codes[n]};{mods + 1}:{kind}u", keys[n], mods, kind)
+            }
+        }
+        n += 1
+    }
+}
+
+fn proof_kitty_functional_matrix_every_split() {
+    let finals = ["A", "B", "C", "D", "H", "F", "P", "Q", "S"]
+    let keys = [
+        KEY_UP,
+        KEY_DOWN,
+        KEY_RIGHT,
+        KEY_LEFT,
+        KEY_HOME,
+        KEY_END,
+        KEY_F1,
+        KEY_F1 + 1,
+        KEY_F1 + 3,
+    ]
+    var n = 0
+    while n < finals.len {
+        for kind in [PRESS, REPEAT, RELEASE] {
+            for mods in [0, MOD_SHIFT, MOD_ALT, MOD_CTRL, MOD_SHIFT | MOD_CTRL] {
+                proof_event("\x1b[1;{mods + 1}:{kind}{finals[n]}", keys[n], mods, kind)
+            }
+        }
+        n += 1
+    }
+    let tilde = [2, 3, 5, 6, 7, 8, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 23, 24]
+    let more = [
+        KEY_INSERT,
+        KEY_DELETE,
+        KEY_PAGE_UP,
+        KEY_PAGE_DOWN,
+        KEY_HOME,
+        KEY_END,
+        KEY_F1,
+        KEY_F1 + 1,
+        KEY_F1 + 2,
+        KEY_F1 + 3,
+        KEY_F1 + 4,
+        KEY_F1 + 5,
+        KEY_F1 + 6,
+        KEY_F1 + 7,
+        KEY_F1 + 8,
+        KEY_F1 + 9,
+        KEY_F1 + 10,
+        KEY_F1 + 11,
+    ]
+    n = 0
+    while n < tilde.len {
+        for kind in [PRESS, REPEAT, RELEASE] {
+            for mods in [0, MOD_SHIFT, MOD_ALT, MOD_CTRL, MOD_SHIFT | MOD_CTRL] {
+                proof_event("\x1b[{tilde[n]};{mods + 1}:{kind}~", more[n], mods, kind)
+            }
+        }
+        n += 1
+    }
+}
+
+/// The binary and checked tests run the same 1,980 sequence rows, each
+/// unsplit and at every byte boundary. Assertions name the failing row.
+pub fn event_selftest() -> int {
+    proof_kitty_printable_matrix_every_split(32, 126)
+    proof_kitty_special_matrix_every_split()
+    proof_kitty_functional_matrix_every_split()
+    1980
+}

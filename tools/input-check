@@ -3,6 +3,9 @@
 import importlib.machinery
 import importlib.util
 import os
+import fcntl
+import struct
+import termios
 from pathlib import Path
 import sys
 import time
@@ -11,11 +14,20 @@ ROOT = Path(__file__).resolve().parent.parent
 loader = importlib.machinery.SourceFileLoader("input_pty", str(ROOT / "tools/pty"))
 pty = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
 loader.exec_module(pty)
+ACTIVE = []
+
+
+def session(*args, **kwargs):
+    s = pty.Session(*args, **kwargs)
+    ACTIVE.append(s)
+    return s
+
+
 QUERY, PUSH, POP = b"\x1b[?u", b"\x1b[>11u", b"\x1b[<u"
 
 
-def row(binary, mode, reply=True):
-    s = pty.Session([str(binary), "--input-loop", mode], 24, 80, pty.env_for(), settle=.01)
+def row(binary, mode, reply=True, rows=24, cols=80):
+    s = session([str(binary), "--input-loop", mode], rows, cols, pty.env_for(), settle=.01)
     start = time.monotonic()
     if mode != "legacy":
         while QUERY not in s.out and time.monotonic() - start < 2:
@@ -33,7 +45,35 @@ def row(binary, mode, reply=True):
         else:
             assert b"exact=false startup=0" in s.err, s.err
             assert time.monotonic() - start < .8, "unsupported terminal stalled"
-    if mode in ("normal", "ctrl-c"):
+    if mode == "resize":
+        fcntl.ioctl(s.master, termios.TIOCSWINSZ, struct.pack("HHHH", 5, 5, 0, 0))
+        s.pump(.04)
+        assert b"size 40x12 changed=false" in s.err, s.err
+        fcntl.ioctl(s.master, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+        s.pump(.04)
+        assert b"size 80x24 changed=true" in s.err, s.err
+        s.type(b"q")
+    if mode == "stream":
+        sequence = [
+            (b"\x1b[1;1:1B", b"held down=true left=false up=false ctrl=false"),
+            (b"\x1b[1;1:1D", b"held down=true left=true up=false ctrl=false"),
+            (b"\x1b[1;1:3D", b"held down=true left=false up=false ctrl=false"),
+            (b"\x1b[1;1:3B\x1b[1;1:1D\x1b[1;1:1A", b"held down=false left=true up=true ctrl=false"),
+            (b"\x1b[57442;5:1u", b"held down=false left=true up=true ctrl=true"),
+            (b"\x1b[1;5:3A\x1b[1;5:2D", b"held down=false left=true up=false ctrl=true"),
+            (b"\x1b[57442;1:3u", b"held down=false left=true up=false ctrl=false"),
+        ]
+        for data, want in sequence:
+            before = len(s.err)
+            s.type(data, settle=.02)
+            assert s.err[before:].splitlines()[-1] == want, s.err[before:]
+        # Waiting beyond the inferred model's whole initial delay cannot clear
+        # an exact hold. A repeat on an unrelated registered key checks it.
+        s.pump(.5)
+        s.type(b"\x1b[120;1:2u", settle=.02)
+        assert s.err.splitlines()[-1] == b"held down=false left=true up=false ctrl=false"
+        s.type(b"\x1b[113;1:1u")
+    if mode in ("normal", "ctrl-c", "small"):
         s.type(b"\x03" if mode == "ctrl-c" else b"q")
     s.finish(timeout=5)
     problems = []
@@ -52,12 +92,44 @@ def main():
         return 3
     for tier in ("native", "release"):
         binary = ROOT / "target" / tier / "lair"
-        for mode in ("normal", "ctrl-c", "crash", "error"):
+        for mode in ("normal", "ctrl-c", "crash", "error", "stream"):
             row(binary, mode)
         row(binary, "normal", reply=False)
         row(binary, "legacy", reply=False)
+        row(binary, "small", rows=12, cols=40)
+        row(binary, "resize", rows=12, cols=40)
+        for mode, cols, rows in (("small", 39, 12), ("small", 40, 11), ("normal", 40, 12)):
+            s = session([str(binary), "--input-loop", mode], rows, cols, pty.env_for())
+            s.finish(timeout=5)
+            assert s.status == 2 and pty.ENTER_ALT not in s.out, "minimum refused before mutation"
+            assert pty.termios_words(s.before) == pty.termios_words(s.after)
+            print("input-minimum %s %s %sx%s refused ok" % (tier, mode, cols, rows), flush=True)
+    for kitty in (False, True):
+        s = session([sys.executable, "-I", str(ROOT / "tools/keyprobe")] + (["--kitty"] if kitty else []),
+                        24, 80, pty.env_for(), settle=.01)
+        if kitty:
+            s.pump(.01)
+            s.type(b"\x1b[?0u", settle=.01)
+            s.type(b"\x1b[57442;5:1u\x1b[1;5:1D\x1b[1;5:3D\x1b[57442;1:3u", settle=.01)
+            s.type(b"\x1b[113;1:1u")
+        else:
+            s.type(b"q")
+        s.finish(timeout=5)
+        assert s.status == 0 and pty.termios_words(s.before) == pty.termios_words(s.after), s.err
+        if kitty:
+            assert s.out.count(PUSH) == s.out.count(POP) == 1
+            assert b"press key=LeftCtrl" in s.out and b"release key=Left" in s.out and b"held=[]" in s.out
+        print("keyprobe %s restored ok" % ("kitty" if kitty else "legacy"), flush=True)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        result = main()
+    finally:
+        # Reap our holder even when an assertion fails (important on macOS).
+        for s in ACTIVE:
+            if not hasattr(s, "status"):
+                s.type(b"q", settle=.01)
+                s.finish(timeout=5)
+    sys.exit(result)

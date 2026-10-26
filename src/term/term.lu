@@ -27,6 +27,7 @@
 //! a terminal that refuses its mode. `message` gives each its sentence.
 
 use clock
+use input
 use std.env
 use std.fs
 use std.io as std_io
@@ -357,22 +358,31 @@ pub fn witness(mode: str) -> int {
         return 0
     }
     var s = open_input(
-        if mode == "small" then 40 else MIN_COLS,
-        if mode == "small" then 12 else MIN_ROWS,
+        if mode == "small" || mode == "resize" then 40 else MIN_COLS,
+        if mode == "small" || mode == "resize" then 12 else MIN_ROWS,
     ) else |_| { return 2 }
     eprint("input-ready exact={s.keyboard} startup={s.startup.len}")
+    var decoder = input.new()
+    var state = input.state_new(s.keyboard)
+    input.register(mut state, input.char_key(120))
+    let startup_quit = witness_keys(mut decoder, mut state, s.startup, 0)
+    if startup_quit { close_input(mut s); return 0 }
     if mode == "crash" { assert(false, "input crash witness") }
     if mode == "error" { close_input(mut s); return 2 }
     var timer = clock.new(clock.now_ns())
     let deadline = clock.now_ns() + 2000000000
+    var tick = 0
     while clock.now_ns() < deadline {
         let wake = clock.wait_until(mut timer, deadline, signal_set()) else |_| { break }
         if wake.meaning & signal.interrupt() != 0 { break }
+        if wake.meaning & signal.resize() != 0 {
+            let changed = resize_input(mut s)
+            eprint("size {s.terminal.cols}x{s.terminal.rows} changed={changed}")
+        }
         if wake.input_ready {
             let bytes = read_keys(256) else |_| { break }
-            var quit = false
-            for b in bytes { if b as int == 113 { quit = true } }
-            if quit { break }
+            tick += 1
+            if witness_keys(mut decoder, mut state, bytes, tick) { break }
         }
     }
     close_input(mut s)
@@ -383,4 +393,31 @@ pub fn witness(mode: str) -> int {
 /// Resize a keyboard session with the same minimum used to open it.
 pub fn resize_input(mut s: Session) -> bool {
     resize_min(mut s.terminal, s.min_cols, s.min_rows)
+}
+
+fn witness_keys(
+    mut decoder: input.Decoder,
+    mut state: input.KeyState,
+    bytes: List[byte],
+    tick: int,
+) -> bool {
+    var events = List[input.Event]()
+    input.events_all(mut decoder, bytes, clock.now_ns() / 1000000, mut events)
+    var quit = false
+    for e in events {
+        input.update(mut state, e, tick)
+        eprint("event key={e.key} mods={e.mods} kind={e.kind}")
+        eprint(
+            "held down={input.held(input.key_hold(state, input.KEY_DOWN), tick)} left={input.held(input.key_hold(state, input.KEY_LEFT), tick)} up={input.held(input.key_hold(state, input.KEY_UP), tick)} ctrl={input.held(input.key_hold(state, input.KEY_CTRL), tick)}",
+        )
+        if e.kind != input.RELEASE &&
+            (
+                e.key == input.char_key(113) ||
+                    e.key == input.KEY_INTERRUPT ||
+                    e.key == input.char_key(99) && e.mods & input.MOD_CTRL != 0
+            ) {
+            quit = true
+        }
+    }
+    quit
 }
