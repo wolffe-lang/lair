@@ -290,7 +290,7 @@ fn finish_csi(mut d: Decoder, final: int, mut keys: List[int]) {
     }
     let key = if final == 117 then unicode_key(code) else functional_key(code, final)
     if key == KEY_NONE { d.ignored += 1; return }
-    emit(mut d, key, mods - 1, kind, mut keys)
+    emit(mut d, key, mods - 1, PRESS, mut keys)
 }
 
 /// Feed one byte at `now_ms` (any monotonic millisecond count; it only
