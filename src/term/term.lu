@@ -61,6 +61,11 @@ error ReadErrors = {eof, io}
 /// The sentence for a refusal, for standard error, in the program's
 /// name (`prog`: the game's).
 pub fn message(e: str, prog: str) -> str {
+    message_min(e, prog, MIN_COLS, MIN_ROWS)
+}
+
+/// Refusal text using the caller's configured floor.
+pub fn message_min(e: str, prog: str, min_cols: int, min_rows: int) -> str {
     if e == "not_tty" {
         return "{prog}: standard input and output must be a terminal (try: {prog} --headless)"
     }
@@ -68,7 +73,7 @@ pub fn message(e: str, prog: str) -> str {
         return "{prog}: TERM=dumb cannot draw the forest"
     }
     if e == "small" {
-        return "{prog}: the terminal is smaller than {MIN_COLS}x{MIN_ROWS}; enlarge it"
+        return "{prog}: the terminal is smaller than {min_cols}x{min_rows}; enlarge it"
     }
     "{prog}: the terminal refused its mode"
 }
@@ -86,6 +91,12 @@ pub fn leave_bytes() -> str {
 /// Open the terminal: both standard streams must be terminals, `TERM`
 /// not dumb, the size at least the minimum. Nothing is changed yet.
 pub fn open() -> Term ! OpenErrors {
+    open_min(MIN_COLS, MIN_ROWS)?
+}
+
+/// Open with a positive minimum size; invalid minima answer small.
+pub fn open_min(min_cols: int, min_rows: int) -> Term ! OpenErrors {
+    if min_cols < 1 || min_rows < 1 { return small }
     let tin = fs.stdin()
     let tout = fs.stdout()
     let in_tty = std_io.is_terminal(tin) else false
@@ -110,7 +121,7 @@ pub fn open() -> Term ! OpenErrors {
         rows = 24
         cols = 80
     }
-    if rows < MIN_ROWS || cols < MIN_COLS {
+    if rows < min_rows || cols < min_cols {
         return small
     }
     Term {
@@ -184,16 +195,22 @@ pub fn leave(mut t: Term) {
 /// the minimum is kept as the minimum (the field never shrinks below it;
 /// the terminal clips).
 pub fn resize(mut t: Term) -> bool {
+    resize_min(mut t, MIN_COLS, MIN_ROWS)
+}
+
+/// Resize using a caller's floor; invalid minima leave the terminal unchanged.
+pub fn resize_min(mut t: Term, min_cols: int, min_rows: int) -> bool {
+    if min_cols < 1 || min_rows < 1 { return false }
     let size = std_term.size(fs.stdout()) else |_| {
         return false
     }
     var rows = size.rows
     var cols = size.columns
-    if rows < MIN_ROWS {
-        rows = MIN_ROWS
+    if rows < min_rows {
+        rows = min_rows
     }
-    if cols < MIN_COLS {
-        cols = MIN_COLS
+    if cols < min_cols {
+        cols = min_cols
     }
     if rows == t.rows && cols == t.cols {
         return false
@@ -228,6 +245,8 @@ pub struct Session {
     terminal: Term,
     keyboard: bool,
     startup: List[byte],
+    min_cols: int,
+    min_rows: int,
 }
 
 /// Support query and the exact enhancements required for key-up events.
@@ -306,10 +325,16 @@ fn negotiate(mut s: Session) -> () ! {io} {
 }
 
 /// Open, enter and negotiate. Existing open/enter users remain legacy-only.
-pub fn open_input() -> Session ! OpenErrors {
-    var terminal = open()?
+pub fn open_input(min_cols: int, min_rows: int) -> Session ! OpenErrors {
+    var terminal = open_min(min_cols, min_rows)?
     enter(mut terminal) else |_| { leave(mut terminal); return io }
-    var s = Session { terminal: terminal, keyboard: false, startup: List[byte]() }
+    var s = Session {
+        terminal: terminal,
+        keyboard: false,
+        startup: List[byte](),
+        min_cols: min_cols,
+        min_rows: min_rows,
+    }
     negotiate(mut s) else |_| { close_input(mut s); return io }
     s
 }
@@ -331,7 +356,10 @@ pub fn witness(mode: str) -> int {
         leave(mut t)
         return 0
     }
-    var s = open_input() else |_| { return 2 }
+    var s = open_input(
+        if mode == "small" then 40 else MIN_COLS,
+        if mode == "small" then 12 else MIN_ROWS,
+    ) else |_| { return 2 }
     eprint("input-ready exact={s.keyboard} startup={s.startup.len}")
     if mode == "crash" { assert(false, "input crash witness") }
     if mode == "error" { close_input(mut s); return 2 }
@@ -350,4 +378,9 @@ pub fn witness(mode: str) -> int {
     close_input(mut s)
     close_input(mut s)
     0
+}
+
+/// Resize a keyboard session with the same minimum used to open it.
+pub fn resize_input(mut s: Session) -> bool {
+    resize_min(mut s.terminal, s.min_cols, s.min_rows)
 }
