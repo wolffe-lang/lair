@@ -1,0 +1,45 @@
+memory gate 14 GiB
+input-handshake native/normal reply 0.009 ms after query observed; startup-settle 10 ms
+input-pty native/normal kitty ok
+input-handshake native/ctrl-c reply 0.009 ms after query observed; startup-settle 10 ms
+input-pty native/ctrl-c kitty ok
+input-handshake native/crash reply 0.016 ms after query observed; startup-settle 10 ms
+input-pty native/crash kitty ok
+input-handshake native/error reply 0.008 ms after query observed; startup-settle 10 ms
+input-pty native/error kitty ok
+input-handshake native/stream reply 0.008 ms after query observed; startup-settle 10 ms
+input-pty native/stream kitty ok
+input-handshake native/normal reply 0.008 ms after query observed; startup-settle 250 ms
+input-pty native/normal kitty ok
+input-pty native/normal fallback ok
+input-pty native/legacy fallback ok
+input-handshake native/small reply 0.009 ms after query observed; startup-settle 10 ms
+input-pty native/small kitty ok
+input-handshake native/resize reply 0.009 ms after query observed; startup-settle 10 ms
+input-pty native/resize kitty ok
+input-minimum native small 39x12 refused ok
+input-minimum native small 40x11 refused ok
+input-minimum native normal 40x12 refused ok
+input-handshake release/normal reply 0.007 ms after query observed; startup-settle 10 ms
+input-pty release/normal kitty ok
+input-handshake release/ctrl-c reply 0.008 ms after query observed; startup-settle 10 ms
+input-pty release/ctrl-c kitty ok
+input-handshake release/crash reply 0.011 ms after query observed; startup-settle 10 ms
+input-pty release/crash kitty ok
+input-handshake release/error reply 0.009 ms after query observed; startup-settle 10 ms
+input-pty release/error kitty ok
+input-handshake release/stream reply 0.009 ms after query observed; startup-settle 10 ms
+input-pty release/stream kitty ok
+input-handshake release/normal reply 0.011 ms after query observed; startup-settle 250 ms
+input-pty release/normal kitty ok
+input-pty release/normal fallback ok
+input-pty release/legacy fallback ok
+input-handshake release/small reply 0.019 ms after query observed; startup-settle 10 ms
+input-pty release/small kitty ok
+input-handshake release/resize reply 0.010 ms after query observed; startup-settle 10 ms
+input-pty release/resize kitty ok
+input-minimum release small 39x12 refused ok
+input-minimum release small 40x11 refused ok
+input-minimum release normal 40x12 refused ok
+keyprobe legacy restored ok
+keyprobe kitty restored ok

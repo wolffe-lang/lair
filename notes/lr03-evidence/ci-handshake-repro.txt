@@ -1,0 +1,4 @@
+controlled-parent-delay-ms 0 write-ms-after-query-observed [(b'x\x1b[', 0.005), (b'?0', 23.735), (b'uy', 44.155)]
+stderr b'input-ready exact=true startup=2\nevent key=1120 mods=0 kind=1\nheld down=false left=false up=false ctrl=false\nevent key=1121 mods=0 kind=1\nheld down=false left=false up=false ctrl=false\n' exit 0
+controlled-parent-delay-ms 180.0 write-ms-after-query-observed [(b'x\x1b[', 0.007), (b'?0', 25.093), (b'uy', 249.104)]
+stderr b'input-ready exact=false startup=5\nevent key=1120 mods=0 kind=1\nheld down=false left=false up=false ctrl=false\nevent key=1121 mods=0 kind=1\nheld down=false left=false up=false ctrl=false\n' exit 0
