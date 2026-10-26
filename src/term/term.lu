@@ -315,7 +315,7 @@ fn negotiate(mut s: Session) -> () ! {io} {
                 std_term.restore_at_exit(
                     fs.stdout(),
                     s.terminal.saved,
-                    byte_list(pop_bytes() + leave_bytes()),
+                    byte_list(leave_bytes()),
                 ) else |_| { return io }
                 s.keyboard = true
                 write(byte_list(push_bytes()))?
