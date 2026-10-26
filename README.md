@@ -33,8 +33,8 @@ fill, frame, a sprite blitted from rows), `term`, `input` (legacy keys, kitty ev
 `headless` (frames as text and styles, a capture through the model, the diff property) and `probe` (the
 glyph-width probe), and `sound` (the part reader, integer orchestra, prepared cue mixing and WAV playback).
 `src/lair.lu` is the engine's own small binary: `lair --selftest` on the shipped tier
-and `lair --apply`, plus `--play`, `--render` and `--wav` for original musical parts. Sound is not yet
-wired into either game; the WAV adapter does not stream live mixed transitions (`docs/SOUND.md`).
+and `lair --apply`, plus `--play`, `--render` and `--wav` for original musical parts. Game-specific sound wiring lives in the games;
+the WAV adapter does not stream live mixed transitions (`docs/SOUND.md`).
 
 Kitty keyboard input is opt-in: `term.open_input(cols, rows)` queries for at most
 150 ms, enables flags 11 only on a reply, and restores the stack on exit.
