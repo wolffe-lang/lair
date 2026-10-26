@@ -2,10 +2,11 @@
 
 The wolf games collection, and the engine they share. Every game the org writes in wolf runs on this one
 engine: the cell grid and its diff renderer, the two glyph tiers, the terminal (raw mode, the alternate
-screen, restored on every exit path), the key decoder and the held-key model, the fixed 30 Hz clock, replay
+screen, restored on every exit path), the key decoder and the inferred/exact held-key models, the fixed 30 Hz clock, replay
 files, the prepared-PCM sound mixer, the forest's seeded noise, the headless goldens, the pty runner, the perf gate, the memory gate and
 the CI tier planner. The games are their own repositories and pin this one by commit: `pack` (lead a pack
-of wolves up a forest path) and `cub` (a cub finds its way home through Thornmere, a souls-like). The
+of wolves up a forest path) `cub` (a cub finds its way home through Thornmere, a souls-like), `trail` (a growing trail of wolves)
+and `fugue` (a counterpoint tutor). The
 installer row for PAX and the collection's documents will live here too.
 
 ## Where it runs
@@ -27,13 +28,21 @@ directories staying byte-identical and its eight pty rows green on both hosts.
 
 The modules under `src/`: `grid` (the cell, the grid, the diff renderer, the dumps, the terminal model),
 `tier` (rich and plain, detection, the dialect, the nearest 256-colour index and the blend), `draw` (text,
-fill, frame, a sprite blitted from rows), `term`, `input` (the decoder and `Hold`), `clock`, `replay` (the
+fill, frame, a sprite blitted from rows), `term`, `input` (legacy keys, kitty events, `KeyState` and `Hold`), `clock`, `replay` (the
 `.pk` file with a game's vocabulary), `world` (the noise, the hash, the density, the forest's cover),
 `headless` (frames as text and styles, a capture through the model, the diff property) and `probe` (the
 glyph-width probe), and `sound` (the part reader, integer orchestra, prepared cue mixing and WAV playback).
 `src/lair.lu` is the engine's own small binary: `lair --selftest` on the shipped tier
 and `lair --apply`, plus `--play`, `--render` and `--wav` for original musical parts. Sound is not yet
 wired into either game; the WAV adapter does not stream live mixed transitions (`docs/SOUND.md`).
+
+Kitty keyboard input is opt-in: `term.open_input(cols, rows)` queries for at most
+150 ms, enables flags 11 only on a reply, and restores the stack on exit.
+`input.events_all` supplies press/repeat/release; `input.key_hold` and the existing
+`input.held` query a registered key. `input.exact` distinguishes this from legacy
+inference. Existing games and their `Term` layout remain compatible; a pin bump
+alone does not switch their input mode. See `docs/KEYS.md` for adoption and the
+live terminal witness.
 
 ## How a game holds it
 
@@ -54,8 +63,9 @@ compiler bundles) for the engine and for every game that pins it.
 
 ```
 tools/fetch-toolchain    stage the pinned toolchain into .wolf-bin/
-tools/check             fmt, 68 checked tests, both builds, PCM goldens, sound pty/cost rows, selftest
+tools/check             fmt, 79 checked tests, both builds, PCM goldens, sound/input pty rows, both selftests
 tools/build --release    target/release/lair
+tools/keyprobe --kitty   query the terminal, inspect press/repeat/release and held keys
 ```
 
 In a game the same tools run from `.lair/tools/` and add the game's goldens (`goldens`), its pty rows
@@ -73,7 +83,7 @@ The games' workflows run the same planner from their staged engine.
 ## Documents
 
 `docs/ENGINE.md` what is engine and what is game, and how a game holds the engine; `docs/REPLAY.md` the
-`.pk` replay file; `docs/SOUND.md` the musical format, cue API, output boundary and port authorship. The games' own documents (the design constants, the sprites, the glyph lists, the
+`.pk` replay file; `docs/KEYS.md` keyboard negotiation, events, held keys and terminal minima; `docs/SOUND.md` the musical format, cue API, output boundary and port authorship. The games' own documents (the design constants, the sprites, the glyph lists, the
 palettes, the keys) are in the games.
 
 ## Licence
