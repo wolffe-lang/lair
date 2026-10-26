@@ -1,0 +1,29 @@
+lr03 prediction — recorded before implementation
+
+Footprint: cross-cutting
+Prediction: kitty flags 1|2|8 (11), queried for at most 150 ms, supply exact
+press/repeat/release, including independent modifier keys. A non-answering
+terminal stays on the unchanged inferred Hold model. The existing held(Hold,
+tick) API stays source compatible; a registered KeyState supplies Hold views.
+Down press + Left press/release will leave Down held; Left+Up will coexist;
+either Control key will remain down across arrow events until its own release.
+Every supported sequence will decode identically at every byte split. All four
+games' existing golden files will remain byte-identical with this engine.
+
+Compatibility recommendation R-lr03-1: keep held(h: Hold, tick: int) -> bool;
+key_hold(state, key) supplies its per-key view, exact(state) declares the mode.
+R-lr03-2: retain the public Term layout (trail constructs it), with a new
+open_input(cols, rows) session owning the terminal, negotiated mode and startup
+bytes; old open/enter callers remain unmodified. Negotiation belongs after
+raw/alternate-screen entry: kitty's main/alternate flag stacks are independent.
+Register pop-before-leave bytes before pushing; restore on normal/error/runtime
+trap paths. Startup bytes unrelated to the query are preserved for the decoder.
+
+Forbidden: no terminal/kitty/TUI/other engine source; published kitty protocol
+specification only. No game source edits/pushed pins, planning/config edits,
+labels, merges, attribution, packages, or host process-table signal probes.
+Evidence planned: checked unit tests, both binary selftests, Linux container
+pty restoration and scripted held streams, one final macOS pty run, all four
+games' Linux goldens, deliberately red CI draft plants, canonical lane audit.
+Full five-section note will be carried in the PR body (wrapper forbids Markdown
+report/note files), with evidence committed here.
