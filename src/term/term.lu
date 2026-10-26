@@ -327,7 +327,7 @@ fn negotiate(mut s: Session) -> () ! {io} {
 
 /// Open, enter and negotiate. Existing open/enter users remain legacy-only.
 pub fn open_input(min_cols: int, min_rows: int) -> Session ! OpenErrors {
-    var terminal = open_min(min_cols, min_rows)?
+    var terminal = open_min(MIN_COLS, MIN_ROWS)?
     enter(mut terminal) else |_| { leave(mut terminal); return io }
     var s = Session {
         terminal: terminal,
