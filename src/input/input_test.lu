@@ -336,3 +336,87 @@ fn test_kitty_defaults_optional_fields_and_refusals() {
         check(seq, List[int](), "malformed ignored without overflow")
     }
 }
+
+fn apply_stream(mut state: KeyState, text: str, tick: int) {
+    var d = new()
+    var events = List[Event]()
+    events_all(mut d, bytes_of(text), 0, mut events)
+    for e in events { update(mut state, e, tick) }
+}
+
+fn test_exact_down_resumes_after_left_tap() {
+    var state = state_new(true)
+    assert(exact(state), "negotiated exact mode")
+    apply_stream(mut state, "\x1b[1;1:1B", 0)
+    apply_stream(mut state, "\x1b[1;1:1D", 1)
+    assert(
+        held(key_hold(state, KEY_DOWN), 100) && held(key_hold(state, KEY_LEFT), 100),
+        "both held",
+    )
+    apply_stream(mut state, "\x1b[1;1:3D", 2)
+    assert(
+        held(key_hold(state, KEY_DOWN), 10000) && !held(key_hold(state, KEY_LEFT), 2),
+        "Down resumes",
+    )
+    apply_stream(mut state, "\x1b[1;1:3B", 3)
+    assert(!held(key_hold(state, KEY_DOWN), 3), "Down releases")
+}
+
+fn test_exact_diagonal_and_ctrl_across_arrows() {
+    var state = state_new(true)
+    apply_stream(mut state, "\x1b[57442;5:1u\x1b[1;5:1D\x1b[1;5:1A", 0)
+    assert(
+        held(key_hold(state, KEY_LEFT), 900) && held(key_hold(state, KEY_UP), 900),
+        "Left+Up diagonal",
+    )
+    apply_stream(mut state, "\x1b[1;5:3A\x1b[1;5:2D", 20)
+    assert(
+        held(key_hold(state, KEY_LEFT_CTRL), 900) && held(key_hold(state, KEY_CTRL), 900),
+        "Ctrl across arrows",
+    )
+    apply_stream(mut state, "\x1b[57448;5:1u\x1b[57442;5:3u", 21)
+    assert(
+        !held(key_hold(state, KEY_LEFT_CTRL), 21) &&
+            held(key_hold(state, KEY_RIGHT_CTRL), 21) &&
+            held(key_hold(state, KEY_CTRL), 21),
+        "left/right Control independent",
+    )
+    apply_stream(mut state, "\x1b[57448;1:3u", 22)
+    assert(
+        !held(key_hold(state, KEY_CTRL), 22) && held(key_hold(state, KEY_LEFT), 22),
+        "release Ctrl only",
+    )
+    clear(mut state)
+    assert(!held(key_hold(state, KEY_LEFT), 22), "clear releases all keys")
+}
+
+fn test_registered_key_and_inferred_equivalence() {
+    var state = state_new(false)
+    register(mut state, char_key(120))
+    var old = hold_new()
+    for tick in [0, 12, 14, 17, 19, 22] {
+        apply_stream(mut state, "x", tick)
+        hold_press(mut old, tick)
+        register(mut state, char_key(120))
+        var now = tick
+        while now < tick + 40 {
+            assert(
+                held(key_hold(state, char_key(120)), now) == held(old, now),
+                "same inferred hold",
+            )
+            now += 1
+        }
+    }
+    assert(!exact(state) && !held(key_hold(state, char_key(121)), 0), "unknown key never held")
+    apply_stream(mut state, "\x1b[1;5D", 100)
+    assert(
+        held(key_hold(state, KEY_CTRL), 101) && !held(key_hold(state, KEY_CTRL), 112),
+        "fallback Ctrl expires",
+    )
+    var precise = state_new(true)
+    register(mut precise, char_key(120))
+    apply_stream(mut precise, "\x1b[120;1:2u", 0)
+    assert(held(key_hold(precise, char_key(120)), 9000), "repeat establishes missing press")
+    apply_stream(mut precise, "\x1b[120;1:3u", 1)
+    assert(!held(key_hold(precise, char_key(120)), 1), "registered key release")
+}

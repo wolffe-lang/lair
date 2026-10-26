@@ -468,5 +468,96 @@ pub fn hold_press(mut h: Hold, tick: int) {
 
 /// Whether the key is held at `tick`.
 pub fn held(h: Hold, tick: int) -> bool {
-    tick < h.until
+    h.until == -2 || tick < h.until
+}
+
+/// A registered key's held-state slot. No tick allocation is needed.
+pub struct Slot { key: int, history: Hold, down: bool }
+
+/// Physical keys registered by a game, with an explicit negotiated mode.
+pub struct KeyState { slots: List[Slot], negotiated: bool, modifiers: int }
+
+/// Arrows and modifiers are always registered; register any other game key.
+pub fn state_new(negotiated: bool) -> KeyState {
+    var s = KeyState { slots: List[Slot](), negotiated: negotiated, modifiers: 0 }
+    for key in [
+        KEY_UP,
+        KEY_DOWN,
+        KEY_LEFT,
+        KEY_RIGHT,
+        KEY_LEFT_SHIFT,
+        KEY_RIGHT_SHIFT,
+        KEY_LEFT_CTRL,
+        KEY_RIGHT_CTRL,
+        KEY_LEFT_ALT,
+        KEY_RIGHT_ALT,
+        KEY_SHIFT,
+        KEY_CTRL,
+        KEY_ALT,
+    ] {
+        register(mut s, key)
+    }
+    s
+}
+
+/// Register a physical (unshifted) key. Re-registering never resets a hold.
+pub fn register(mut s: KeyState, key: int) {
+    if key == KEY_NONE { return }
+    for slot in s.slots { if slot.key == key { return } }
+    (mut s.slots).push(Slot { key: key, history: hold_new(), down: false })
+}
+
+/// True only for a session that negotiated flags 1|2|8, never guessed from input.
+pub fn exact(s: KeyState) -> bool { s.negotiated }
+
+fn modifier_bit(key: int) -> int {
+    if key == KEY_SHIFT { return MOD_SHIFT }
+    if key == KEY_CTRL { return MOD_CTRL }
+    if key == KEY_ALT { return MOD_ALT }
+    0
+}
+
+/// Apply one event. Exact holds persist until release; inferred holds use
+/// the existing HOLD_RATE_MAX model, including Ctrl+arrow's modifier bit.
+pub fn update(mut s: KeyState, e: Event, tick: int) {
+    if e.kind < PRESS || e.kind > RELEASE { return }
+    if s.negotiated { s.modifiers = e.mods }
+    var i = 0
+    while i < s.slots.len {
+        let bit = modifier_bit(s.slots[i].key)
+        if s.negotiated {
+            if s.slots[i].key == e.key {
+                s.slots[i].down = e.kind != RELEASE
+                if e.kind != RELEASE { hold_press(mut s.slots[i].history, tick) }
+            }
+            if bit != 0 { s.slots[i].down = e.mods & bit != 0 }
+        } else if e.kind != RELEASE && (s.slots[i].key == e.key || bit != 0 && e.mods & bit != 0) {
+            hold_press(mut s.slots[i].history, tick)
+        }
+        i += 1
+    }
+}
+
+/// Obtain a value-only Hold view. Feed it to held(view, tick). Unknown keys
+/// are never held; exact down uses the reserved until=-2 (ticks are >=0).
+pub fn key_hold(s: KeyState, key: int) -> Hold {
+    for slot in s.slots {
+        if slot.key == key {
+            var h = slot.history
+            if s.negotiated { h.until = if slot.down then -2 else -1 }
+            return h
+        }
+    }
+    hold_new()
+}
+
+/// Clear every key on focus loss or a game transition; no stale exact holds.
+pub fn clear(mut s: KeyState) {
+    var i = 0
+    while i < s.slots.len {
+        s.slots[i].down = false
+        s.slots[i].history = hold_new()
+        i += 1
+    }
+    s.modifiers = 0
 }
