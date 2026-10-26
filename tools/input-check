@@ -26,17 +26,23 @@ def session(*args, **kwargs):
 QUERY, PUSH, POP = b"\x1b[?u", b"\x1b[>11u", b"\x1b[<u"
 
 
-def row(binary, mode, reply=True, rows=24, cols=80):
-    s = session([str(binary), "--input-loop", mode], rows, cols, pty.env_for(), settle=.01)
+def row(binary, mode, reply=True, rows=24, cols=80, startup_settle=.01):
+    replies = [(QUERY, b"x\x1b[?0uy")] if reply and mode != "legacy" else []
+    s = session([str(binary), "--input-loop", mode], rows, cols, pty.env_for(),
+                settle=startup_settle, replies=replies)
     start = time.monotonic()
     if mode != "legacy":
         while QUERY not in s.out and time.monotonic() - start < 2:
             s.pump(.005)
         assert QUERY in s.out, "support query missing"
         if reply:
-            # Preserve unrelated startup input and split the answer itself.
-            for part in (b"x\x1b[", b"?0", b"uy"):
-                s.type(part, settle=.005)
+            # The pump already answered upon observing QUERY, including during
+            # constructor settling. Byte-split parsing is separately tested at
+            # every boundary in term_test and the shared decoder matrix.
+            assert len(s.reply_times) == 1, "stand-in did not answer exactly once"
+            _, observed, written = s.reply_times[0]
+            print("input-handshake %s/%s reply %.3f ms after query observed; startup-settle %.0f ms" %
+                  (binary.parent.name, mode, (written - observed) * 1000, startup_settle * 1000), flush=True)
         while b"input-ready" not in s.err and time.monotonic() - start < 2:
             s.pump(.005)
         assert b"input-ready" in s.err, s.err
@@ -94,6 +100,9 @@ def main():
         binary = ROOT / "target" / tier / "lair"
         for mode in ("normal", "ctrl-c", "crash", "error", "stream"):
             row(binary, mode)
+        # Regression: caller setup lasts longer than the protocol deadline.
+        # A real stand-in terminal still replies promptly from the output pump.
+        row(binary, "normal", startup_settle=.250)
         row(binary, "normal", reply=False)
         row(binary, "legacy", reply=False)
         row(binary, "small", rows=12, cols=40)
@@ -106,13 +115,22 @@ def main():
             print("input-minimum %s %s %sx%s refused ok" % (tier, mode, cols, rows), flush=True)
     for kitty in (False, True):
         s = session([sys.executable, "-I", str(ROOT / "tools/keyprobe")] + (["--kitty"] if kitty else []),
-                        24, 80, pty.env_for(), settle=.01)
+                        24, 80, pty.env_for(), settle=.01,
+                        replies=[(QUERY, b"\x1b[?0u")] if kitty else [])
         if kitty:
-            s.pump(.01)
-            s.type(b"\x1b[?0u", settle=.01)
+            deadline = time.monotonic() + 2
+            while PUSH not in s.out and time.monotonic() < deadline:
+                s.pump(.005)
+            assert PUSH in s.out, "keyprobe did not enable after the query reply"
             s.type(b"\x1b[57442;5:1u\x1b[1;5:1D\x1b[1;5:3D\x1b[57442;1:3u", settle=.01)
             s.type(b"\x1b[113;1:1u")
         else:
+            # Python startup may outlast constructor settling; tty.setraw uses
+            # TCSAFLUSH, so typing q before this marker can discard the key.
+            deadline = time.monotonic() + 2
+            while b"keyprobe-ready" not in s.out and time.monotonic() < deadline:
+                s.pump(.005)
+            assert b"keyprobe-ready" in s.out, "keyprobe never entered raw mode"
             s.type(b"q")
         s.finish(timeout=5)
         assert s.status == 0 and pty.termios_words(s.before) == pty.termios_words(s.after), s.err

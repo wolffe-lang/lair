@@ -97,7 +97,7 @@ class Session:
     `stty -a` on the slave for the record) and the game's exit status on a
     pipe. Nothing here traps, masks or sends a signal."""
 
-    def __init__(self, argv, rows, cols, env, settle=0.3):
+    def __init__(self, argv, rows, cols, env, settle=0.3, replies=()):
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         r_rep, w_rep = os.pipe()
@@ -135,6 +135,11 @@ class Session:
         self.out = b""
         self.err = b""
         self.eof = False
+        # Stand-in terminal replies must be sent while draining output, even
+        # during constructor settling. A caller that responds afterwards can
+        # consume the application's entire bounded negotiation window first.
+        self.replies = list(replies)
+        self.reply_times = []
         self.pump(settle)
         self.job = int(os.read(r_pid, 32).strip() or b"0")
         os.close(r_pid)
@@ -154,6 +159,15 @@ class Session:
                     self.eof = True
                 else:
                     self.out += chunk
+                    while self.replies and self.replies[0][0] in self.out:
+                        query, answer = self.replies.pop(0)
+                        observed = time.monotonic()
+                        # One tiny write, no pumps or artificial inter-byte
+                        # sleeps that could strand a partial answer at timeout.
+                        written = os.write(self.master, answer)
+                        if written != len(answer):
+                            raise RuntimeError("short stand-in terminal reply")
+                        self.reply_times.append((query, observed, time.monotonic()))
             if self.r_err in r:
                 chunk = os.read(self.r_err, 65536)
                 if chunk:

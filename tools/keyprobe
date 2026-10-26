@@ -58,6 +58,7 @@ def main():
     show("keyprobe: q / Ctrl-C finishes; TERM=%s" % os.environ.get("TERM", "?"))
     try:
         tty.setraw(fd)
+        show("keyprobe-ready")
         if options.kitty:
             os.write(sys.stdout.fileno(), QUERY)
             deadline = time.monotonic() + .150
