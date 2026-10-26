@@ -10,7 +10,7 @@ engine owns the draw calls):
 | `tier`: the two tiers (rich, plain), detection from `TERM` and the locale, the dialect, the nearest 256-colour index and the RGB blend between two indices | the sprite table (pack's `sprites`): which semantic sprite is which code point and colour role on each tier, the palette's keyframes by phase, the card cells, the list `docs/GLYPHS.md` is held to |
 | `draw`: text in a style, a filled rectangle, a framed box, a sprite blitted from rows of text, the text fitting the cards need | the frame (pack's `art`): what is drawn where, in what order, from the simulation; the sheets the art study commits; the cards and their words |
 | `term`: raw mode and the alternate screen through `std.term`, the restore registered before the first byte and re-armed on leave, the signal set, the size and its change, the refusals by name (`not_tty`, `dumb`, `small`, `io`) | the live loop and the title loop: what the keys do, what ends a run, what the closing line says |
-| `input`: the decoder (arrows in both forms, the Shift+arrows, Esc by a timeout, Ctrl-C as a byte, Enter, Backspace, every printable byte as a character key; the kitty and tilde forms ignored) and the held-key model from ticks | the key vocabulary (pack's `keys`): which character or Shift+arrow is the leap, the parry, the quit; which keys the title reads and which the run records |
+| `input`: the decoder (arrows in both forms, the Shift+arrows, Esc by a timeout, Ctrl-C as a byte, Enter, Backspace, every printable byte as a character key; the kitty and tilde forms ignored) and the inferred/exact held-key models (opt-in kitty events, `docs/KEYS.md`) | the key vocabulary (pack's `keys`): which character or Shift+arrow is the leap, the parry, the quit; which keys the title reads and which the run records |
 | `clock`: the fixed 30 Hz tick, the one wait on standard input, the signals and the next deadline | nothing: a game never reads a clock |
 | `replay`: the `.pk` file, read and written with the game's words (`Vocab`); keys, resizes and numeric events by tick; `start`; the score comment | the words, and what the numeric events mean (pack's `health`) |
 | `world`: the seeded value noise, the hash of a cell, the forest's density and its three bands, the forest's cover by distance from open ground, a cell's texture variant and marks | what lies over the forest: pack's path (its centre and half width from the noise's channels 1 and 2), its spawn and deer rates (`trail`); cub's areas and their graph |
@@ -54,3 +54,25 @@ is answered, the package form is a mechanical move: `deps: { lair: { path: "../.
   it; a game's sprite table test holds every sprite to it.
 - **The bytes a frame are the fewest the pen allows**, in the dialect the tier names; the terminal model
   reads them back to the grid (the diff property, in every shipped binary's `--selftest`).
+
+## Input and held keys
+
+`docs/KEYS.md` is the engine's input contract for games. Existing `Term`,
+`open`/`enter`, `feed`/`feed_all` and `held(Hold, tick)` stay source-compatible.
+Opt-in `term.open_input(cols, rows)` owns a bounded 150 ms kitty query, flags 11,
+startup bytes and pop-before-leave restoration. `input.events_all` supplies
+physical press/repeat/release events; `KeyState` supplies registered per-key
+`Hold` views through `key_hold`, queried with the unchanged `held` function.
+`exact` distinguishes true release events from the original inferred model.
+
+The fallback uses `HOLD_TAP_TICKS=12`, `HOLD_RATE_MAX=5`, `HOLD_MARGIN=1`: a tap
+holds for the initial-repeat window; repeat spacing narrows the expiry. It
+cannot infer two physically held arrows or a modifier that emits no bytes.
+The exact model does not expire holds on ticks. Movement priority, diagonal
+speed and sprint stamina remain game rules. The game must adopt the opt-in
+opener and event API to gain exact input; a pin bump alone changes no controls.
+
+Terminal minima are configurable through `open_min`/`resize_min` or the session
+opener; legacy defaults remain 80×24. The real-pty rows in `tools/input-check`
+cover supported/ignored negotiation, normal/error/interrupt/crash restoration,
+held streams and size refusal/resizing on both binary tiers.
