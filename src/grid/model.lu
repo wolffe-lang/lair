@@ -11,7 +11,10 @@
 //! 2, 7, 22, 27, 30-37, 90-97, 40-47, 100-107, 38;5;n, 48;5;n, 38;2;r;g;b
 //! and 48;2 mapped back to the nearest cube index, 39, 49) and the private
 //! modes `ESC [ ? … h/l` (recorded: 1049 the alternate screen, 25 the
-//! cursor). Anything else in a CSI is consumed and counted in `unknown`.
+//! cursor). Kitty keyboard controls `CSI ? u` (query), `CSI > flags u`
+//! (push), `CSI < n u` (pop), and `CSI = flags ; mode u` (set) render
+//! nothing; omitted parameters use the protocol defaults. Anything else
+//! in a CSI is consumed and counted in `unknown`. See docs/SOURCES.md.
 //! Wrapping is deferred as a real terminal defers it: a glyph in the last
 //! column leaves the cursor there with a wrap pending.
 
@@ -32,7 +35,10 @@ pub struct Model {
     params: List[int],
     param: int,
     have_param: bool,
-    private: bool,
+    intermediate: int,
+    csi_invalid: bool,
+    csi_separators: int,
+    csi_colon: bool,
     utf8_need: int,
     utf8_cp: int,
 }
@@ -61,7 +67,10 @@ pub fn model_new(rows: int, cols: int) -> Model {
         params: List[int](),
         param: 0,
         have_param: false,
-        private: false,
+        intermediate: 0,
+        csi_invalid: false,
+        csi_separators: 0,
+        csi_colon: false,
         utf8_need: 0,
         utf8_cp: 0,
     }
@@ -248,7 +257,28 @@ fn finish_csi(mut m: Model, final: int) {
     if m.have_param {
         (mut m.params).push(m.param)
     }
-    if m.private {
+    if m.csi_invalid {
+        m.unknown += 1
+        return
+    }
+    // Kitty keyboard controls affect no cells. Prefix and parameter grammar
+    // matter: neither bare CSI u nor a prefixed SGR is a keyboard control.
+    if final == 117 && !m.csi_colon {
+        if m.intermediate == 63 && m.params.len == 0 && m.csi_separators == 0 {
+            return
+        }
+        if (m.intermediate == 62 || m.intermediate == 60) && m.csi_separators == 0 {
+            return
+        }
+        if m.intermediate == 61 && m.csi_separators <= 1 {
+            if m.csi_separators == 0 ||
+                !m.have_param ||
+                param_at(m, 1) >= 1 && param_at(m, 1) <= 3 {
+                return
+            }
+        }
+    }
+    if m.intermediate == 63 {
         let mode = param_at(m, 0)
         if final == 104 {
             if mode == 1049 {
@@ -275,6 +305,10 @@ fn finish_csi(mut m: Model, final: int) {
         } else {
             m.unknown += 1
         }
+        return
+    }
+    if m.intermediate != 0 {
+        m.unknown += 1
         return
     }
     if final == 72 || final == 102 {
@@ -333,7 +367,10 @@ fn model_byte(mut m: Model, b: int) {
             m.params = List[int]()
             m.param = 0
             m.have_param = false
-            m.private = false
+            m.intermediate = 0
+            m.csi_invalid = false
+            m.csi_separators = 0
+            m.csi_colon = false
         } else {
             // ESC followed by anything else: two bytes, ignored.
             m.esc = ESC_NONE
@@ -349,11 +386,18 @@ fn model_byte(mut m: Model, b: int) {
             }
             m.have_param = true
         } else if b == 59 || b == 58 {
+            m.csi_separators += 1
+            if b == 58 {
+                m.csi_colon = true
+            }
             (mut m.params).push(if m.have_param then m.param else 0)
             m.param = 0
             m.have_param = false
-        } else if b == 63 {
-            m.private = true
+        } else if b >= 60 && b <= 63 {
+            if m.intermediate != 0 || m.have_param || m.csi_separators != 0 {
+                m.csi_invalid = true
+            }
+            m.intermediate = b
         } else if b >= 64 && b <= 126 {
             m.esc = ESC_NONE
             finish_csi(mut m, b)
@@ -363,7 +407,8 @@ fn model_byte(mut m: Model, b: int) {
             m.unknown += 1
             model_byte(mut m, b)
         } else {
-            // An intermediate byte: read on, counted once at the final.
+            // An unsupported intermediate cannot turn into a known final.
+            m.csi_invalid = true
         }
         return
     }

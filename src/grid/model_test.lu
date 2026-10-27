@@ -1,0 +1,104 @@
+//! Keyboard-control recognition: published kitty protocol, not an emulator.
+
+fn bytes_of(s: str) -> List[byte] {
+    var out = List[byte]()
+    push_str(mut out, s)
+    out
+}
+
+fn check_keyboard_control(s: str, unknown: int) {
+    let bytes = bytes_of(s)
+    // Endpoints include a single whole feed; every interior byte boundary
+    // exercises persistent parser state across two model_feed calls.
+    var split = 0
+    while split <= bytes.len {
+        var m = model_new(2, 2)
+        model_feed(mut m, bytes_of("\x1b[?1049h\x1b[?25l\x1b[31mAB"))
+        let before = copy m.grid
+        let style = copy m.style
+        var left = List[byte]()
+        var right = List[byte]()
+        var i = 0
+        while i < bytes.len {
+            if i < split {
+                (mut left).push(bytes[i])
+            } else {
+                (mut right).push(bytes[i])
+            }
+            i += 1
+        }
+        model_feed(mut m, left)
+        model_feed(mut m, right)
+        assert(
+            m.unknown == unknown,
+            "keyboard CSI split {split}: unknown {m.unknown}, expected {unknown}",
+        )
+        assert(model_equals(m, before) && same(m.style, style), "control changed cells or style")
+        assert(m.row == 0 && m.col == 1 && m.wrap_pending, "control changed cursor or pending wrap")
+        assert(
+            m.alt_screen && !m.cursor_visible && m.alt_enters == 1 && m.alt_leaves == 0,
+            "control changed modes",
+        )
+        model_feed(mut m, bytes_of("\x1b[?25h\x1b[?1049l\x1b[0mC"))
+        assert(
+            m.cursor_visible && !m.alt_screen && m.alt_leaves == 1,
+            "parser did not reset for private modes",
+        )
+        assert(at(m.grid, 1, 0).cp == 67 && m.unknown == unknown, "parser did not resume rendering")
+        split += 1
+    }
+}
+
+fn test_model_keyboard_query_every_split() {
+    check_keyboard_control("\x1b[?u", 0)
+}
+
+fn test_model_keyboard_push_every_split() {
+    check_keyboard_control("\x1b[>11u", 0)
+    check_keyboard_control("\x1b[>u", 0)
+    check_keyboard_control("\x1b[>0u", 0)
+}
+
+fn test_model_keyboard_pop_every_split() {
+    check_keyboard_control("\x1b[<u", 0)
+    check_keyboard_control("\x1b[<2u", 0)
+}
+
+fn test_model_keyboard_set_every_split() {
+    check_keyboard_control("\x1b[=11;1u", 0)
+    check_keyboard_control("\x1b[=8;2u", 0)
+    check_keyboard_control("\x1b[=2;3u", 0)
+    check_keyboard_control("\x1b[=11u", 0)
+    check_keyboard_control("\x1b[=u", 0)
+    check_keyboard_control("\x1b[=;2u", 0)
+    check_keyboard_control("\x1b[=11;u", 0)
+}
+
+fn test_model_unknown_private_mode_every_split() {
+    check_keyboard_control("\x1b[?1h", 1)
+}
+
+fn test_model_unknown_push_sgr_every_split() {
+    check_keyboard_control("\x1b[>11m", 1)
+}
+
+fn test_model_unknown_keyboard_forms_every_split() {
+    check_keyboard_control("\x1b[u", 1)
+    check_keyboard_control("\x1b[11u", 1)
+    check_keyboard_control("\x1b[!u", 1)
+    check_keyboard_control("\x1b[?11u", 1)
+    check_keyboard_control("\x1b[?;u", 1)
+    check_keyboard_control("\x1b[>11;u", 1)
+    check_keyboard_control("\x1b[<1;2u", 1)
+    check_keyboard_control("\x1b[=11;4u", 1)
+    check_keyboard_control("\x1b[=11;0u", 1)
+    check_keyboard_control("\x1b[=11;1;u", 1)
+    check_keyboard_control("\x1b[=11:1u", 1)
+    check_keyboard_control("\x1b[>>11u", 1)
+    check_keyboard_control("\x1b[>?u", 1)
+    check_keyboard_control("\x1b[11>u", 1)
+    check_keyboard_control("\x1b[>11 u", 1)
+    check_keyboard_control("\x1b[>11z", 1)
+    check_keyboard_control("\x1b[>25h", 1)
+    check_keyboard_control("\x1b[!m", 1)
+}
