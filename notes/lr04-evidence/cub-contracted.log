@@ -1,0 +1,11 @@
+From https://github.com/wolffe-lang/cub
+ * branch              1edbce4fa732a719b18a931204f4f0f10509394e -> FETCH_HEAD
+M	lair.pin
+HEAD is now at 1edbce4f Record the keyboard negotiation capture-model blocker
+1edbce4fa732a719b18a931204f4f0f10509394e
+build: target/native/cub
+build: target/release/cub
+pty: agree-rich ok (linux x86_64, exit 0, 56288 bytes captured)
+pty: agree-plain ok (linux x86_64, exit 0, 30946 bytes captured)
+cub agree-rich tail: alt_enters 1 alt_leaves 1 cursor_visible true unknown 0
+cub agree-plain tail: alt_enters 1 alt_leaves 1 cursor_visible true unknown 0
