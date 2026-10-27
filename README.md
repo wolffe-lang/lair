@@ -42,7 +42,10 @@ Kitty keyboard input is opt-in: `term.open_input(cols, rows)` queries for at mos
 `input.held` query a registered key. `input.exact` distinguishes this from legacy
 inference. Existing games and their `Term` layout remain compatible; a pin bump
 alone does not switch their input mode. See `docs/KEYS.md` for adoption and the
-live terminal witness.
+live terminal witness. The headless terminal model recognises the query, push,
+pop and set controls without rendering them; unrelated controls still count as
+unknown. Input-loop captures and the retained cub capture must replay with
+`unknown 0` and restored alternate-screen/cursor state (`docs/SOURCES.md`).
 
 ## How a game holds it
 
@@ -63,7 +66,7 @@ compiler bundles) for the engine and for every game that pins it.
 
 ```
 tools/fetch-toolchain    stage the pinned toolchain into .wolf-bin/
-tools/check             fmt, 79 checked tests, both builds, PCM goldens, sound/input pty rows, both selftests
+tools/check             fmt, 86 checked tests, both builds, PCM goldens, sound/input pty rows, both selftests
 tools/build --release    target/release/lair
 tools/keyprobe --kitty   query the terminal, inspect press/repeat/release and held keys
 ```
