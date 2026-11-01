@@ -39,7 +39,9 @@ tools run from the staged tree (`.lair/tools/check`) and find the game's root ab
 The symlinks are the shape because of a compiler gap measured on 2026-10-25 at wolf 0.2.35: a `wolf.pkg`
 path dependency's child modules cannot import their own siblings (`use grid` inside the dependency's
 `tier` module is E0301 from the consumer's build), and `wolf test` in the consumer rejects a test that
-imports the dependency at all. The reproducer is `notes/cb00-evidence/probes/dep-sibling/`. When the gap
+imports the dependency at all. The reproducer is `notes/cb00-evidence/probes/dep-sibling/`; re-run at
+wolf 0.2.36 on 2026-11-01, its consumer build is still E0301 in `pkg://eng/tier/tier.lu`
+(`notes/r41q-evidence/dep-sibling-0.2.36.log`; the `wolf test` half was not re-measured). When the gap
 is answered, the package form is a mechanical move: `deps: { lair: { path: "../.lair/src" } }` and
 `use lair.grid` at every import.
 
