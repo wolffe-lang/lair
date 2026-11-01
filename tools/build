@@ -47,8 +47,11 @@ for tier in $tiers; do
         # `pack --selftest` in the same binary passes; the native tier and the
         # release tier with the mid-end off decode every key; witness: the
         # pty runner's `quit` and `ctrl-c` rows under pack's
-        # notes/pk00-the-engine.md, the wolf-lang issue to file). The guide's
-        # precedent for a mid-end fault (wolf-lang#146) is this switch.
+        # notes/pk00-the-engine.md; wolf-lang#940). The fix (s270, wolf-lang
+        # d2753b48) landed after the 0.2.36 tag, so the pinned 0.2.36 still
+        # needs the switch; the first pin that carries s270 drops it, the pty
+        # rows' `ctrl-c` its witness. The guide's precedent for a mid-end
+        # fault (wolf-lang#146) is this switch.
         WOLF_MIDEND=0 "$WOLF" build --release --no-cache --deny-warnings "src/$GAME.lu" -o "target/release/$GAME"
         cp "target/release/$GAME" "target/$GAME"
     else
