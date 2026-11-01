@@ -1,0 +1,32 @@
+== eng alone (expected: 'eng 32')
+warning[W0314]: `tier` holds exactly one item
+ --> ./tier/tier.lu:5:8
+  |
+5 | pub fn glyph() -> grid.Cell {
+  |        ^^^^^ a directory of ceremony around it
+  |
+  = note: fold the item into the module that uses it, or grow the module into the family its name
+    promises; a deliberate seam says so with `#[allow(w0314)]` and a reason.
+
+eng 32
+== app depending on eng (expected 'app 32'; measured at 0.2.35: E0301 in pkg://eng/tier/tier.lu)
+error[E0301]: there is no module named `grid` to import
+ --> pkg://eng/tier/tier.lu:2:5
+  |
+2 | use grid
+  |     ^^^^ cannot be resolved
+  |
+  = note: a module is a directory of `.lu` files: a sibling directory of the package root forms
+    one (D32), and `std.…` or a package alias also resolves here.
+
+warning[W0314]: `eng.tier` holds exactly one item
+ --> pkg://eng/tier/tier.lu:5:8
+  |
+5 | pub fn glyph() -> grid.Cell {
+  |        ^^^^^ a directory of ceremony around it
+  |
+  = note: fold the item into the module that uses it, or grow the module into the family its name
+    promises; a deliberate seam says so with `#[allow(w0314)]` and a reason.
+
+wolf run: the package does not compile; fix the errors above (`wolf --explain E0301` explains this code, or any other, by name)
+END dep-sibling exit=2

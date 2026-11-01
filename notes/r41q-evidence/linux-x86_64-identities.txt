@@ -1,0 +1,28 @@
+wolf-0.2.36-x86_64-unknown-linux-gnu.tar.gz read1 d383c74c8cd123b9d9dfaa268271d4f004294f85c2b230237d0ef07027d9500d read2 d383c74c8cd123b9d9dfaa268271d4f004294f85c2b230237d0ef07027d9500d
+lupin-0.1.58-x86_64-unknown-linux-gnu.tar.gz read1 34f52792bb59bc7565e0edc1235cd47d9a6ad13d5e6528993627f2e699b62193 read2 34f52792bb59bc7565e0edc1235cd47d9a6ad13d5e6528993627f2e699b62193
+/home/mfwolffe/lanes/r41q/archives/lupin-0.1.58-x86_64-unknown-linux-gnu/lupin-0.1.58-x86_64-unknown-linux-gnu:
+CHANGELOG.md
+LICENSE
+lupin
+README.md
+
+/home/mfwolffe/lanes/r41q/archives/wolf-0.2.36-x86_64-unknown-linux-gnu/wolf-0.2.36-x86_64-unknown-linux-gnu:
+libwolf_rt.a
+libwolf_rt_none.a
+LICENSE
+LICENSE-EXCEPTION
+README.md
+std
+_wolf
+wolf
+wolf.1
+wolf.bash
+wolf-cimport-worker
+wolf.fish
+wolf --version:
+wolf 0.2.36 (wolfgang, pin 5adf3d9)
+paired with lupin 0.1.58 (reference interpreter), pin a5378e3
+lupin --version:
+lupin 0.1.58 (wolf-interp, reference interpreter at pin a5378e3)
+bundled STD-REV: 78b9d3cbc41d51db44d18c40b6694403644d1c83
+FETCH_PAIR_EXIT 0 2026-11-01T00:13:01Z
