@@ -57,11 +57,11 @@ src/grid -> ../.lair/src/grid    a symlink per engine module; `use grid` in the 
 ```
 
 The symlinks are the shape because a `wolf.pkg` path dependency's child modules cannot import their own
-siblings at wolf 0.2.35 (`docs/ENGINE.md` has the reproducer's place); the package form waits on the fix.
+siblings at wolf 0.2.35, nor at 0.2.36 (`docs/ENGINE.md` has the reproducer's place); the package form waits on the fix.
 
 ## Build and test
 
-The toolchain is pinned by digest in `wolf-toolchain.toml` (wolf 0.2.35, lupin 0.1.56, the std tree the
+The toolchain is pinned by digest in `wolf-toolchain.toml` (wolf 0.2.36, lupin 0.1.58, the std tree the
 compiler bundles) for the engine and for every game that pins it.
 
 ```
