@@ -6,9 +6,10 @@
 #              builds, `lair --selftest`); and pack ON THIS ENGINE in the
 #              container: pack cloned at the first ref of ci/games.conf that
 #              exists, this checkout staged as its `.lair` (LAIR_UNPINNED=1,
-#              said loudly), then pack's whole Linux leg — fmt, 129 tests,
-#              both builds, the selftest, the 39 goldens byte for byte, the
-#              eight pty rows. The proof that the engine still plays pack.
+#              said loudly), then pack's whole Linux leg — fmt, every test
+#              with no SKIP, both builds, the selftest, every golden byte for
+#              byte, every pty row (at pack trunk 27848095, r41q: 190 tests,
+#              77 goldens, ten rows). The proof that the engine still plays pack.
 #   tier full  the above plus the macOS leg (the engine's build, tests and
 #              selftest on a macOS runner).
 # Every step runs bare and its exit code is read directly: no pipes. A red
