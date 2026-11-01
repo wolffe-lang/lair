@@ -35,8 +35,8 @@ Written before the first change (2026-11-01, base `9a65bf54`).
 No merge, label, tag, release, issue filed or closed; no attribution trailer. No build on the Mac (the Mac
 only downloaded and hashed archives); local runs on hasu block B alone, both lock names held per run;
 kasumi not touched. No source of another implementation read. No engine module, golden, test or game
-changed: the pin, one comment in `tools/build`, one sentence in `docs/ENGINE.md`, the README's two
-version statements, this note and its evidence. cub is cb19's and is not in this PR.
+changed: the pin, one comment in `tools/build`, one ref dropped from `ci/games.conf` (R-r41q-2), one
+sentence in `docs/ENGINE.md`, the README's two version statements, this note and its evidence. cub is cb19's and is not in this PR.
 
 ## Inputs verified
 
@@ -68,9 +68,14 @@ version statements, this note and its evidence. cub is cb19's and is not in this
   - Nothing else in lair names 0.2.36 or "the next pin".
 - **R-r41q-1, the release tier's switch at 0.2.36:** (A) keep `WOLF_MIDEND=0` until a pin carries s270;
   (B) drop it now. Recommend and implemented (A): the fix is not in the pinned compiler.
-- **R-r41q-2, `ci/games.conf`:** (A) unchanged, so this PR's `pack` job runs pack's trunk on the engine
-  under test at the new pin; (B) put `r41q-pack` first. Recommend and implemented (A): pack's pin branch
-  can only be cut after this merges, and trunk is the game the pin must not break.
+- **The prediction was wrong about what the `pack` job runs.** The gauntlet's first run staged pack at
+  **`cb00` (`59cef80`)**, not trunk: `ci/games.conf` named `cb00 trunk`, and pack's `cb00` branch was
+  merged on 2026-10-25 (pack#25) but never deleted, so `ci/stage-game` has taken it first on every lair
+  run since, 46 commits behind pack trunk `27848095`.
+- **R-r41q-2, `ci/games.conf`:** (A) drop the merged `cb00`, so this PR's `pack` job runs pack's trunk on
+  the engine under test at the new pin; (B) leave the line and list pack's stale branch for deletion.
+  Recommend and implemented (A): the pin must be proved on the game as it is, and the line's own comment
+  now says a ref leaves at its merge. (Deleting pack's merged branches is the orchestrator's, listed.)
 - **R-r41q-3, the plant's base:** (A) trunk plus one changed digest digit (the gate every pin passes);
   (B) this branch plus the same. Recommend and implemented (A), the lane rules' "base + a break the fix
   never contains".
@@ -87,13 +92,17 @@ version statements, this note and its evidence. cub is cb19's and is not in this
   dep-sibling log.
 - `3f5eff6` `docs/ENGINE.md`: the dependency gap re-measured at 0.2.36.
 - `4310339` README only: the pinned pair.
+- `0616699` `ci/games.conf`: pack's trunk, not the merged `cb00` (R-r41q-2).
 - The gauntlet at the final head, on hasu block B (`/home/mfwolffe/lanes/r41q/bin/gauntlet-lair.sh`, its
   log under `/home/mfwolffe/lanes/r41q/logs/`): the head asserted, the pin proved against the API
   passes, the image `localhost/r41q-pack-ci:fbee7e864f7dbee6` built from `ci/Containerfile`,
   `tools/fetch-toolchain`, `tools/check-linux` in the container (CPUs 6-11), then pack's trunk staged
   with this checkout as its `.lair` (`ci/stage-game`), its toolchain fetched and its `check-linux` run
-  with `LAIR_UNPINNED=1`. Every step prints `END <step> exit=N`; the wrapper stops at the first nonzero
-  one. The END lines and the counts are in the PR body.
+  with `LAIR_UNPINNED=1` (job-wide, as CI's `pack` job sets it). Every step prints `END <step>
+  exit=N`; the wrapper stops at the first nonzero one. The END lines and the counts are in the PR body.
+  A first run at `37fdb9df` went red at `pack-fetch-toolchain` by the gauntlet's own fault (it set
+  `LAIR_UNPINNED=1` on the container run only) after the engine leg was green (86 passed, 0 SKIP); that
+  run is what showed the `cb00` staging.
 - The plant: lair#25, branch `r41q-plant-lair-digest`, commit `6678266` on trunk `9a65bf54`. Its red
   `tier pr` run is cited in the PR body.
 
@@ -102,4 +111,6 @@ version statements, this note and its evidence. cub is cb19's and is not in this
 The PR is open at its final head with `tier pr` green there, `Footprint: cross-cutting` (a pin), the audit
 run once and passing but for the labelled `tier full`, which the orchestrator labels and watches. The
 games follow once this merges: `lair.pin` in fugue, trail and pack (pack's own `wolf-toolchain.toml`
-too), each its own PR on its own branch. Nothing to close or file from lair.
+too), each its own PR on its own branch. Nothing to close or file from lair. For the orchestrator: pack
+still carries its merged `cb00` branch and the merged lanes' plant branches; none is read by lair's CI
+after R-r41q-2.
