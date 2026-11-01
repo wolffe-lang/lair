@@ -26,7 +26,7 @@ repo = "wolffe-lang/wolf-lang"
 rev = "cf0c13d38479f444b69bb8356ad5709d07eff323"
 version_line = "wolf 0.2.35 (wolfgang, pin cf0c13d)"
 aarch64-apple-darwin = "240b84d079b1b9a0d88681ac08fca4816f84778e2d6c94c435ceb2dd6a5f042a"
-x86_64-unknown-linux-gnu = "4cc4045bbbb605c07835bc4f32685953c784eeef4cd3139a48b457dfc90dad1a"
+x86_64-unknown-linux-gnu = "5cc4045bbbb605c07835bc4f32685953c784eeef4cd3139a48b457dfc90dad1a"
 aarch64-unknown-linux-gnu = "30ccded432264b7ddd4ebf738d4f895d12091ca604e2da4c2f831da807886f3e"
 
 [lupin]
