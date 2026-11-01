@@ -76,6 +76,12 @@ sentence in `docs/ENGINE.md`, the README's two version statements, this note and
   the engine under test at the new pin; (B) leave the line and list pack's stale branch for deletion.
   Recommend and implemented (A): the pin must be proved on the game as it is, and the line's own comment
   now says a ref leaves at its merge. (Deleting pack's merged branches is the orchestrator's, listed.)
+- **The prediction's pack counts were `cb00`'s.** pack's trunk on this engine at 0.2.36 holds **190
+  tests** (zero SKIPs), **77 goldens** byte for byte (38 cases on both tiers, and the art) and **ten pty
+  rows**, not the 39 goldens and eight rows the prediction copied from lair's own `ci.yml` header. That
+  header now says what the job holds without counts that go stale as pack grows (the 2026-11-01 figures in
+  parentheses). The README's and `docs/ENGINE.md`'s 39-and-eight sentences record the extraction as it
+  was measured then, and stay.
 - **R-r41q-3, the plant's base:** (A) trunk plus one changed digest digit (the gate every pin passes);
   (B) this branch plus the same. Recommend and implemented (A), the lane rules' "base + a break the fix
   never contains".
@@ -93,9 +99,10 @@ sentence in `docs/ENGINE.md`, the README's two version statements, this note and
 - `3f5eff6` `docs/ENGINE.md`: the dependency gap re-measured at 0.2.36.
 - `4310339` README only: the pinned pair.
 - `0616699` `ci/games.conf`: pack's trunk, not the merged `cb00` (R-r41q-2).
+- `7dff887` `.github/workflows/ci.yml`: the `pack` job's header comment names what trunk's leg holds.
 - The gauntlet at the final head, on hasu block B (`/home/mfwolffe/lanes/r41q/bin/gauntlet-lair.sh`, its
   log under `/home/mfwolffe/lanes/r41q/logs/`): the head asserted, the pin proved against the API
-  passes, the image `localhost/r41q-pack-ci:fbee7e864f7dbee6` built from `ci/Containerfile`,
+  passes, the planner's and the memory gate's tests (CI's `plan-test`), the image `localhost/r41q-pack-ci:fbee7e864f7dbee6` built from `ci/Containerfile`,
   `tools/fetch-toolchain`, `tools/check-linux` in the container (CPUs 6-11), then pack's trunk staged
   with this checkout as its `.lair` (`ci/stage-game`), its toolchain fetched and its `check-linux` run
   with `LAIR_UNPINNED=1` (job-wide, as CI's `pack` job sets it). Every step prints `END <step>
