@@ -122,6 +122,37 @@ jobs:
             game/target/goldens
             game/target/pty
             game/target/test.log
+  cub:
+    # tier: pr
+    name: cub on this engine (complete Linux suite)
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'cub')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      LAIR_UNPINNED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: cub trunk on the engine under test
+        run: ci/stage-game cub game
+      - uses: actions/cache@v4
+        with:
+          path: game/.wolf-bin
+          key: lair-toolchain-linux-${{ hashFiles('wolf-toolchain.toml') }}
+      - name: the pinned toolchain, by digest
+        run: game/.lair/tools/fetch-toolchain
+      - name: cub's complete Linux suite, including both gameplay backends
+        env:
+          LAIR_ENGINE: docker
+        run: game/.lair/tools/in-container tools/check-linux
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: cub-evidence
+          path: |
+            game/target/goldens
+            game/target/pty
+            game/target/test.log
   macos:
     name: macOS arm64 (the engine's build, tests, selftest)
     needs: plan
@@ -150,6 +181,7 @@ jobs:
       - plan-test
       - linux
       - pack
+      - cub
       - macos
     runs-on: ubuntu-24.04
     steps:
