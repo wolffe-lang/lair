@@ -24,6 +24,7 @@ fn usage_text() -> str {
         "  lair --render PART SECONDS OUT   raw stereo S16_LE PCM (0..30 seconds)\n" +
         "  lair --wav PART SECONDS OUT      the same PCM in a WAV\n" +
         "  lair --sound-replay DEN CHASE OUT  deterministic cue replay\n" +
+        "  lair --sound-gain-replay PART OUT  sample-count duck/rise replay\n" +
         "  lair --sound-bench PART on|off   render and mixing cost\n" +
         "  lair --version\n"
 }
@@ -148,6 +149,9 @@ fn main() -> int {
     }
     if args.len == 4 && args[0] == "--sound-replay" {
         return sound.replay_file(args[1], args[2], args[3])
+    }
+    if args.len == 3 && args[0] == "--sound-gain-replay" {
+        return sound.gain_replay_file(args[1], args[2])
     }
     if args.len == 3 && args[0] == "--sound-output" {
         return sound.output_file(args[1], args[2])

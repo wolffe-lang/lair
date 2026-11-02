@@ -74,6 +74,34 @@ pub fn replay_file(den: str, chase: str, output: str) -> int {
     0
 }
 
+/// Eight ticks of sample-count duck/rise/silence, exported for the
+/// independent PCM oracle on both compiled backends. No player or clock.
+pub fn gain_replay_file(path: str, output: str) -> int {
+    var p = load(path, 4) else |_| { return 2 }
+    p.name = "area"
+    p.fade = 1
+    var m = mixer([p]) else |_| { return 2 }
+    var g = slot_gains()
+    let slot = cue_gain(mut m, mut g, "area")
+    if slot < 0 { return 2 }
+    var all = List[byte]()
+    var t = 0
+    while t < 8 {
+        var ok = true
+        if t == 1 { ok = gain(mut g, m, slot, 250, 3200) }
+        if t == 3 { ok = gain(mut g, m, slot, 1000, 1600) }
+        if t == 4 { ok = gain(mut g, m, slot, 0, 0) }
+        if t == 5 { ok = gain(mut g, m, slot, 1000, 0) }
+        if t == 6 { ok = gain(mut g, m, slot, 0, 1) }
+        if t == 7 { ok = gain(mut g, m, slot, 1000, 1) }
+        if !ok { return 2 }
+        for c in tick_gain(mut m, mut g) { (mut all).push(c) }
+        t += 1
+    }
+    fs.write_bytes(output, all) else |_| { return 2 }
+    0
+}
+
 /// Benchmark the same grid render with and without four-layer sound.
 /// Preparation is excluded; cue and every tick are timed. The maximum
 /// audio tick is separately gated at one frame (33.3 ms).
