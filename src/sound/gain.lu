@@ -44,10 +44,24 @@ pub fn gain(mut g: SlotGains, m: Mixer, slot: int, level: int, frames: int) -> b
         return false
     }
     if m.which[slot] < 0 { return false }
+    g.from[slot] = g.current[slot]
+    g.target[slot] = level
+    g.span[slot] = frames
+    g.elapsed[slot] = 0
+    if frames == 0 { g.current[slot] = level }
     true
+}
+
+fn next_gain(mut g: SlotGains, slot: int) -> int {
+    if g.elapsed[slot] < g.span[slot] {
+        g.elapsed[slot] += 1
+        g.current[slot] = g.from[slot] +
+            (g.target[slot] - g.from[slot]) * g.elapsed[slot] / g.span[slot]
+    }
+    g.current[slot]
 }
 
 /// Mix one tick with its optional per-slot gain controller.
 pub fn tick_gain(mut m: Mixer, mut g: SlotGains) -> List[byte] {
-    tick(mut m)
+    mix_tick(mut m, mut g, true)
 }

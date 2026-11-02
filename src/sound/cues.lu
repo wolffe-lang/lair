@@ -123,6 +123,12 @@ fn signed16(pcm: List[byte], at: int) -> int {
 /// Exactly one 30 Hz tick of mixed PCM. A fixed quarter-scale per stream
 /// leaves headroom for four layers. Fade and end-of-part are sample based.
 pub fn tick(mut m: Mixer) -> List[byte] {
+    // The legacy path needs no gain storage or per-tick heap allocation.
+    var g = SlotGains { current: [], from: [], target: [], span: [], elapsed: [] }
+    mix_tick(mut m, mut g, false)
+}
+
+fn mix_tick(mut m: Mixer, mut g: SlotGains, gained: bool) -> List[byte] {
     var out = List[byte]()
     var f = 0
     while f < TICK_FRAMES {
@@ -147,8 +153,9 @@ pub fn tick(mut m: Mixer) -> List[byte] {
                         m.level[s] += 1
                     }
                     let gain = if m.level[s] < 0 { 0 } else { m.level[s] }
-                    l += signed16(m.bank[p].pcm, at) * gain / fade / 4
-                    r += signed16(m.bank[p].pcm, at + 2) * gain / fade / 4
+                    let user_gain = if gained { next_gain(mut g, s) } else { 1000 }
+                    l += signed16(m.bank[p].pcm, at) * gain / fade / 4 * user_gain / 1000
+                    r += signed16(m.bank[p].pcm, at + 2) * gain / fade / 4 * user_gain / 1000
                     m.position[s] += 1
                 }
             }

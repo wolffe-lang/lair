@@ -33,6 +33,26 @@ Preparation is bounded to 262,144 text bytes and 0–30 seconds of output per cu
 at most 92,160,000 PCM bytes before allocator overhead. Small banks are preferable. The tick's returned
 buffer belongs to its caller; use the game's per-frame region/lifetime rather than retaining every tick.
 
+## Per-slot ducking
+
+`slot_gains()` creates four unity gains without changing the existing `Mixer`
+layout or the legacy `cue`/`tick` API. Use `cue_gain(mut mixer, mut gains, name)`
+and `tick_gain(mut mixer, mut gains)` together; `cue_gain` returns the assigned
+slot (0–3), or -1 for an unknown cue/full mixer. A reused slot resets to unity.
+Keep one controller paired with one mixer; do not mix the two cue APIs.
+
+`gain(mut gains, mixer, slot, level, sample_frames)` sets an active slot's gain
+from 0 (silent) to 1000 (unity). The ramp is linear in sample frames, bounded to
+0–1,440,000; zero frames changes it immediately. A ramp reaches the target on
+its final sample, even across tick boundaries. Interrupting a ramp starts from
+its currently reached gain. Invalid levels, spans and inactive/out-of-range
+slots return false without mutation. Silencing a cue does not stop, rewind or
+retire it. To duck an area cue under a boss layer, keep the area slot, ramp it
+to 250, start a layer cue, then ramp the area slot back to 1000. The layer's
+`Part.layer` must be true; a replace cue still retires old slots by design.
+Default unity reproduces the existing PCM bytes. Gain is deterministic PCM
+mixing, not a live audio output bridge.
+
 ## Outputs and their boundary
 
 `wav(pcm)` makes a canonical 44-byte RIFF/WAVE header and payload: stereo signed 16-bit little endian,
