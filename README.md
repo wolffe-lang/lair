@@ -14,9 +14,9 @@ installer row for PAX and the collection's documents will live here too.
 | machine | what runs | state |
 |---|---|---|
 | macOS, Terminal.app or iTerm2 (arm64) | the engine's tests and selftest; the games' rich tier | the maintainer's play; CI's macOS leg on every push to trunk |
-| Linux, any UTF-8 terminal emulator (x86-64) | the same, in a container | CI's Linux leg on every pull request, and pack's whole Linux leg on the engine under test |
-| a Linux virtual terminal (`TERM=linux`) | the games' plain tier (code points 0-255, sixteen colours) | detected from `TERM` |
-| PAX's console | the plain tier today; the rich tier once PAX's font draws the games' `docs/GLYPHS.md` | the font row and the installer row are the games' PAX lanes' |
+| Linux, any UTF-8 terminal emulator (x86-64) | the same, in a container | CI's Linux leg on every pull request, plus pack and cub on the engine under test |
+| a Linux virtual terminal (`TERM=linux`) | the games' plain tier (code points 0-255, sixteen colours) | conservative detection from `TERM` |
+| PAX's console | rich where the console covers the games' glyphs | launch existing games with `--tier rich`; the pure host-override API is available for game adoption |
 
 ## What is engine and what is game
 
@@ -34,7 +34,14 @@ fill, frame, a sprite blitted from rows), `term`, `input` (legacy keys, kitty ev
 glyph-width probe), and `sound` (the part reader, integer orchestra, prepared cue mixing and WAV playback).
 `src/lair.lu` is the engine's own small binary: `lair --selftest` on the shipped tier
 and `lair --apply`, plus `--play`, `--render` and `--wav` for original musical parts. Game-specific sound wiring lives in the games;
-the WAV adapter does not stream live mixed transitions (`docs/SOUND.md`).
+the WAV adapter does not stream live mixed transitions (`docs/SOUND.md`). Optional
+`slot_gains` with `cue_gain`/`tick_gain` adds sample-count duck/rise ramps without
+changing the legacy mixer layout or its default PCM. `--sound-gain-replay PART OUT`
+exports a deterministic gain witness checked on both compiled backends.
+
+`tier.detect_override(term, locale, override)` accepts a host's explicit rich/plain
+assertion while keeping detection pure. Games can pass `LAIR_TIER` when no `--tier`
+was given; a pin bump alone does not add environment-variable handling to a game.
 
 Kitty keyboard input is opt-in: `term.open_input(cols, rows)` queries for at most
 150 ms, enables flags 11 only on a reply, and restores the stack on exit.
@@ -66,7 +73,7 @@ compiler bundles) for the engine and for every game that pins it.
 
 ```
 tools/fetch-toolchain    stage the pinned toolchain into .wolf-bin/
-tools/check             fmt, 86 checked tests, both builds, PCM goldens, sound/input pty rows, both selftests
+tools/check             planner/tool proofs, fmt, 90 checked tests, both builds, PCM/gain oracles, sound/input pty rows, both selftests
 tools/build --release    target/release/lair
 tools/keyprobe --kitty   query the terminal, inspect press/repeat/release and held keys
 ```
@@ -78,10 +85,16 @@ trap), `agree-rich` and `agree-plain` (a replayed case's captured bytes, through
 its headless final frame). The memory gate (`tools/memgate.py`, `tools/lib-mem.sh`) is the maintainer's
 Mac's rule and nobody else's.
 
-CI (`.github/workflows/ci.yml`, `ci/tiers.py`): a pull request runs the planner's test, the Linux leg and
-pack on this engine (pack cloned at the first ref of `ci/games.conf` that exists, this checkout staged as
-its `.lair`, its whole Linux leg run); trunk, the nightly and the `full-matrix` label add the macOS leg.
-The games' workflows run the same planner from their staged engine.
+CI (`.github/workflows/ci.yml`, `ci/tiers.py`): a pull request runs the planner,
+memory, check-entrypoint and perf-status proofs, the engine's Linux leg, pack's
+engine/golden/pty leg and cub's complete Linux suite on this engine. Consumers
+are cloned from `ci/games.conf` and this checkout is staged as their `.lair`.
+Trunk, the nightly and the `full-matrix` label add the engine and pack on macOS,
+including pack's tests, both builds, goldens and pty rows. The engine's own
+`tools/check` and `tools/check-linux` also run the planner proofs; they are not
+imposed on a game's workflow. The games' workflows use the same planner from
+their staged engine. `tools/perf` preserves a failing idle/latency runner's exit
+status as well as its diagnostics, even on a POSIX shell without pipefail.
 
 ## Documents
 
