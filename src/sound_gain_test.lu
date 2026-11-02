@@ -1,0 +1,90 @@
+use sound
+
+fn gain_pcm() -> List[byte] {
+    var pcm = List[byte]()
+    var i = 0
+    while i < 1600 * 12 {
+        // Left +4096, right -4096. Quarter scale is +/-1024.
+        for b in [0 as byte, 16 as byte, 0 as byte, 240 as byte] { (mut pcm).push(b) }
+        i += 1
+    }
+    pcm
+}
+
+fn gain_sample(pcm: List[byte], frame: int, channel: int) -> int {
+    let at = frame * 4 + channel * 2
+    let n = pcm[at] as int + pcm[at + 1] as int * 256
+    if n >= 32768 { n - 65536 } else { n }
+}
+
+fn gain_bank() -> sound.Mixer {
+    let p = sound.Part { name: "area", pcm: gain_pcm(), layer: true, fade: 1 }
+    sound.mixer([p]) else |_| {
+        assert(false, "bank")
+        sound.Mixer { bank: [], which: [], position: [], level: [], leaving: [] }
+    }
+}
+
+fn test_sound_slot_gain_duck_and_restore() {
+    var m = gain_bank()
+    var g = sound.slot_gains()
+    assert(sound.cue_gain(mut m, mut g, "area") == 0, "first slot")
+    let _fade = sound.tick_gain(mut m, mut g)
+    assert(sound.gain(mut g, m, 0, 250, 3200), "duck across two ticks")
+    let a = sound.tick_gain(mut m, mut g)
+    assert(g.current[0] == 625, "halfway gain")
+    let b = sound.tick_gain(mut m, mut g)
+    assert(g.current[0] == 250 && m.position[0] == 4800, "duck never stops the area cue")
+    assert(gain_sample(a, 1599, 0) == 640, "halfway PCM")
+    assert(gain_sample(b, 1599, 0) == 256 && gain_sample(b, 1599, 1) == -256, "stereo PCM")
+    assert(sound.gain(mut g, m, 0, 1000, 1600), "rise")
+    let c = sound.tick_gain(mut m, mut g)
+    assert(gain_sample(c, 1599, 0) == 1024 && g.current[0] == 1000, "restored exactly")
+}
+
+fn test_sound_slot_gain_refusals_and_interrupted_ramp() {
+    var m = gain_bank()
+    var g = sound.slot_gains()
+    assert(!sound.gain(mut g, m, 0, 0, 1), "inactive refuses")
+    assert(sound.cue_gain(mut m, mut g, "area") == 0, "cue")
+    for s in [-1, 4] { assert(!sound.gain(mut g, m, s, 0, 1), "slot bounds") }
+    for level in [-1, 1001] { assert(!sound.gain(mut g, m, 0, level, 1), "gain bounds") }
+    for frames in [-1, 1440001] { assert(!sound.gain(mut g, m, 0, 0, frames), "frame bounds") }
+    assert(g.current[0] == 1000 && g.span[0] == 0, "refusals atomic")
+    assert(sound.gain(mut g, m, 0, 0, 3200), "start ramp")
+    let _first = sound.tick_gain(mut m, mut g)
+    assert(g.current[0] == 500, "half ramp")
+    assert(sound.gain(mut g, m, 0, 1000, 1600), "interrupt ramp")
+    assert(g.from[0] == 500, "restart from reached gain")
+    let _second = sound.tick_gain(mut m, mut g)
+    assert(g.current[0] == 1000, "new target")
+    assert(sound.gain(mut g, m, 0, 0, 0), "immediate silence")
+    let silent = sound.tick_gain(mut m, mut g)
+    for b in silent { assert(b == 0 as byte, "silence keeps ticking") }
+    assert(m.position[0] == 4800 && m.which[0] == 0, "not retired")
+}
+
+fn test_sound_slot_gain_unity_and_slot_reuse() {
+    var plain = gain_bank()
+    var gained = gain_bank()
+    var g = sound.slot_gains()
+    assert(sound.cue(mut plain, "area"), "plain cue")
+    assert(sound.cue_gain(mut gained, mut g, "area") == 0, "gained cue")
+    var t = 0
+    while t < 13 {
+        let a = sound.tick(mut plain)
+        let b = sound.tick_gain(mut gained, mut g)
+        var i = 0
+        while i < a.len { assert(a[i] == b[i], "unity preserves existing PCM"); i += 1 }
+        t += 1
+    }
+    assert(gained.which[0] == -1, "cue retired")
+    g.current[0] = 0
+    assert(sound.cue_gain(mut gained, mut g, "missing") == -1, "unknown cue atomic")
+    assert(g.current[0] == 0, "refusal does not reset controller")
+    assert(sound.cue_gain(mut gained, mut g, "area") == 0 && g.current[0] == 1000, "reuse resets unity")
+    assert(sound.cue_gain(mut gained, mut g, "area") == 1, "second slot")
+    assert(sound.cue_gain(mut gained, mut g, "area") == 2, "third slot")
+    assert(sound.cue_gain(mut gained, mut g, "area") == 3, "fourth slot")
+    assert(sound.cue_gain(mut gained, mut g, "area") == -1, "full refuses")
+}

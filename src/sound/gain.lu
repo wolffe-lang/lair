@@ -1,0 +1,53 @@
+//! Optional per-slot gain controller. Separate from Mixer to preserve
+//! existing games' struct literals. Always pair cue_gain with tick_gain.
+
+/// Fixed-point unity is 1000. Ramps count sample frames, not ticks.
+pub struct SlotGains {
+    current: List[int],
+    from: List[int],
+    target: List[int],
+    span: List[int],
+    elapsed: List[int],
+}
+
+/// Four unity gains, leaving existing prepared PCM unchanged.
+pub fn slot_gains() -> SlotGains {
+    SlotGains {
+        current: [1000, 1000, 1000, 1000],
+        from: [1000, 1000, 1000, 1000],
+        target: [1000, 1000, 1000, 1000],
+        span: [0, 0, 0, 0],
+        elapsed: [0, 0, 0, 0],
+    }
+}
+
+/// Start a cue and return its slot, or -1 without changing music or gains.
+/// A reused slot starts at unity, never inheriting a retired cue's duck.
+pub fn cue_gain(mut m: Mixer, mut g: SlotGains, name: str) -> int {
+    var slot = 0
+    while slot < 4 && m.which[slot] >= 0 { slot += 1 }
+    if slot == 4 || !cue(mut m, name) { return -1 }
+    g.current[slot] = 1000
+    g.from[slot] = 1000
+    g.target[slot] = 1000
+    g.span[slot] = 0
+    g.elapsed[slot] = 0
+    slot
+}
+
+/// Set 0..1000 gain on an active slot over 0..RATE*30 sample frames.
+/// Invalid requests are atomic. Zero frames means immediate; zero gain
+/// silences but does not stop or rewind the cue. A new ramp starts from
+/// the currently reached gain, including when interrupting another ramp.
+pub fn gain(mut g: SlotGains, m: Mixer, slot: int, level: int, frames: int) -> bool {
+    if slot < 0 || slot >= 4 || level < 0 || level > 1000 || frames < 0 || frames > RATE * 30 {
+        return false
+    }
+    if m.which[slot] < 0 { return false }
+    true
+}
+
+/// Mix one tick with its optional per-slot gain controller.
+pub fn tick_gain(mut m: Mixer, mut g: SlotGains) -> List[byte] {
+    tick(mut m)
+}
