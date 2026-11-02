@@ -1,17 +1,11 @@
 # lair — CI. The tiers are ci/tiers.py's (clef's planner, the house rule);
 # a job marked `# tier: pr` runs for a pull request, the rest for trunk,
 # the nightly, a dispatch and the `full-matrix` label:
-#   tier pr    the planner's test and the memory gate's; the Linux leg
-#              (fmt, the engine's unit tests on the checked machine, both
-#              builds, `lair --selftest`); and pack ON THIS ENGINE in the
-#              container: pack cloned at the first ref of ci/games.conf that
-#              exists, this checkout staged as its `.lair` (LAIR_UNPINNED=1,
-#              said loudly), then pack's whole Linux leg — fmt, every test
-#              with no SKIP, both builds, the selftest, every golden byte for
-#              byte, every pty row (at pack trunk 27848095, r41q: 190 tests,
-#              77 goldens, ten rows). The proof that the engine still plays pack.
-#   tier full  the above plus the macOS leg (the engine's build, tests and
-#              selftest on a macOS runner).
+#   tier pr    the planner, memory, check-entrypoint and perf-status tests;
+#              the engine's Linux leg; pack and cub trunk on this engine,
+#              including their goldens and pty rows (cub's full game suite).
+#   tier full  the above plus the engine and pack on macOS (both builds,
+#              tests, selftests, and pack's goldens and pty rows).
 # Every step runs bare and its exit code is read directly: no pipes. A red
 # nightly opens one issue (ci/nightly-red.sh).
 name: ci
@@ -173,6 +167,35 @@ jobs:
         env:
           LAIR_MEMORY_GATE: '0'
         run: tools/check
+  pack-macos:
+    name: pack on this engine (macOS goldens and pty rows)
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack-macos')
+    runs-on: macos-latest
+    timeout-minutes: 40
+    env:
+      LAIR_UNPINNED: '1'
+      LAIR_MEMORY_GATE: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: pack trunk on the engine under test
+        run: ci/stage-game pack game
+      - uses: actions/cache@v4
+        with:
+          path: game/.wolf-bin
+          key: lair-toolchain-macos-${{ hashFiles('wolf-toolchain.toml') }}
+      - name: the pinned toolchain, by digest
+        run: game/.lair/tools/fetch-toolchain
+      - name: fmt, tests, both builds, selftest, goldens and every pty row
+        run: game/.lair/tools/check
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: pack-macos-evidence
+          path: |
+            game/target/goldens
+            game/target/pty
+            game/target/test.log
   tier:
     name: tier ${{ needs.plan.outputs.tier || 'unplanned' }}
     if: ${{ !cancelled() }}
@@ -183,6 +206,7 @@ jobs:
       - pack
       - cub
       - macos
+      - pack-macos
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
