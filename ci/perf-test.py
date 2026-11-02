@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -25,7 +26,16 @@ class PerfStatus(unittest.TestCase):
             for name in ("perf", "perf-idle", "pty", "memgate.py", "lib-root.sh", "lib-mem.sh"):
                 shutil.copy2(ROOT / "tools" / name, root / "tools" / name)
             binary = root / "failed-game"
-            binary.write_text('#!/bin/sh\nif [ "$1" = --bench ]; then echo "avg_us 1 p99_us 1 max_us 1"; exit 0; fi\necho "lair: synthetic_latency_failure" >&2\nexit 2\n')
+            binary.write_text("#!" + sys.executable + "\n" +
+                              "import os, select, sys, tty\n"
+                              "if '--bench' in sys.argv:\n"
+                              "    print('avg_us 1 p99_us 1 max_us 1'); sys.exit(0)\n"
+                              "tty.setraw(0)\n"
+                              "if '--trace' in sys.argv:\n"
+                              "    os.read(0, 256)\n"
+                              "    print('lair: synthetic_latency_failure', file=sys.stderr); sys.exit(2)\n"
+                              "while True:\n"
+                              "    if select.select([0], [], [], 1/30)[0] and b'q' in os.read(0, 256): break\n")
             binary.chmod(0o755)
             result = subprocess.run(["sh", str(root / "tools/perf"), "--bin", str(binary)],
                                     cwd=root, capture_output=True, text=True, timeout=30)
