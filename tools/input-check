@@ -138,6 +138,8 @@ def main():
             while PUSH not in s.out and time.monotonic() < deadline:
                 s.pump(.005)
             assert PUSH in s.out, "keyprobe did not enable after the query reply"
+            s.type(b"\x1b", settle=.150)
+            assert b"b'\\x1b'" in s.out, "lone Esc must be reported before another byte arrives"
             s.type(b"\x1b[57442;5:1u\x1b[1;5:1D\x1b[1;5:3D\x1b[57442;1:3u", settle=.01)
             s.type(b"\x1b[113;1:1u")
         else:
@@ -147,6 +149,8 @@ def main():
             while b"keyprobe-ready" not in s.out and time.monotonic() < deadline:
                 s.pump(.005)
             assert b"keyprobe-ready" in s.out, "keyprobe never entered raw mode"
+            s.type(b"\x1b", settle=.150)
+            assert b"b'\\x1b'" in s.out, "lone Esc must be reported before q"
             s.type(b"q")
         s.finish(timeout=5)
         assert s.status == 0 and pty.termios_words(s.before) == pty.termios_words(s.after), s.err
