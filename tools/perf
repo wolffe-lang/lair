@@ -54,5 +54,15 @@ for spec in "80x24 1000" "200x60 4000"; do
         fi
     done
 done
-python3 -I "$LAIR_ROOT/tools/perf-idle" --bin "$bin" | tee -a target/perf/summary.txt || status=1
+# POSIX sh returns tee's status for a pipeline. Capture the producer's
+# status directly, then copy its diagnostics to both destinations.
+idle_dir=$(mktemp -d target/perf/idle.XXXXXX)
+trap 'rm -rf "$idle_dir"' 0
+trap 'exit 1' 1 2 15
+if python3 -I "$LAIR_ROOT/tools/perf-idle" --bin "$bin" >"$idle_dir/output" 2>&1; then
+    :
+else
+    status=1
+fi
+tee -a target/perf/summary.txt <"$idle_dir/output"
 exit $status
