@@ -3,7 +3,10 @@ use tier
 fn test_tier_explicit_host_assertion() {
     assert((tier.detect_override("linux", "C", "rich") else -1) == tier.RICH, "PAX host assertion")
     assert((tier.detect_override("xterm", "C.UTF-8", "plain") else -1) == tier.PLAIN, "force plain")
-    assert((tier.detect_override("linux", "C.UTF-8", "") else -1) == tier.PLAIN, "legacy VT unchanged")
+    assert(
+        (tier.detect_override("linux", "C.UTF-8", "") else -1) == tier.PLAIN,
+        "legacy VT unchanged",
+    )
     assert((tier.detect_override("xterm", "C.UTF-8", "") else -1) == tier.RICH, "default detection")
     for bad in ["RICH", "auto", "rich ", "vivid"] {
         assert((tier.detect_override("linux", "C", bad) else -1) == -1, "invalid override refuses")

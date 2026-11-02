@@ -82,7 +82,10 @@ fn test_sound_slot_gain_unity_and_slot_reuse() {
     g.current[0] = 0
     assert(sound.cue_gain(mut gained, mut g, "missing") == -1, "unknown cue atomic")
     assert(g.current[0] == 0, "refusal does not reset controller")
-    assert(sound.cue_gain(mut gained, mut g, "area") == 0 && g.current[0] == 1000, "reuse resets unity")
+    assert(
+        sound.cue_gain(mut gained, mut g, "area") == 0 && g.current[0] == 1000,
+        "reuse resets unity",
+    )
     assert(sound.cue_gain(mut gained, mut g, "area") == 1, "second slot")
     assert(sound.cue_gain(mut gained, mut g, "area") == 2, "third slot")
     assert(sound.cue_gain(mut gained, mut g, "area") == 3, "fourth slot")
