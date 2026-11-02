@@ -11,8 +11,8 @@ fn gain_pcm() -> List[byte] {
     pcm
 }
 
-fn gain_sample(pcm: List[byte], frame: int, channel: int) -> int {
-    let at = frame * 4 + channel * 2
+fn gain_sample(pcm: List[byte], frame: int, side: int) -> int {
+    let at = frame * 4 + side * 2
     let n = pcm[at] as int + pcm[at + 1] as int * 256
     if n >= 32768 { n - 65536 } else { n }
 }
