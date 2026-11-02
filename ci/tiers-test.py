@@ -145,6 +145,14 @@ if ROOT == LAIR:
         "tools/check-linux" in cub and "in-container" in cub,
         "lr05 cub stages this engine and runs its whole Linux suite")
 
+if ROOT == LAIR:
+    pack_macos = job_body("pack-macos")
+    say("pack-macos" in ALL and "pack-macos" not in PR and "macos-latest" in pack_macos,
+        "lr05 pack-macos is a full-tier macOS consumer")
+    say("ci/stage-game pack game" in pack_macos and "LAIR_UNPINNED: '1'" in pack_macos and
+        "game/.lair/tools/check" in pack_macos and "LAIR_MEMORY_GATE: '0'" in pack_macos,
+        "lr05 pack-macos runs every game golden and pty row on this engine")
+
 # T6
 say(verdict(needs_for("full", ALL)) == 0, "T6 a green full run")
 say(verdict(needs_for("pr", PR)) == 0, "T6 a green pr run")
