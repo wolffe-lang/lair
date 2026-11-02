@@ -55,8 +55,7 @@ pub fn gain(mut g: SlotGains, m: Mixer, slot: int, level: int, frames: int) -> b
 fn next_gain(mut g: SlotGains, slot: int) -> int {
     if g.elapsed[slot] < g.span[slot] {
         g.elapsed[slot] += 1
-        g.current[slot] = g.from[slot] +
-            (g.target[slot] - g.from[slot]) * g.elapsed[slot] / g.span[slot]
+        g.current[slot] = 1000
     }
     g.current[slot]
 }

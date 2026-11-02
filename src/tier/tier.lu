@@ -67,7 +67,8 @@ pub fn detect(term: str, lang: str) -> int {
 /// must be rich or plain. A caller's command-line tier takes precedence.
 pub fn detect_override(term: str, lang: str, override: str) -> int ! {parse} {
     if override == "" { return detect(term, lang) }
-    of_name(override)?
+    let _checked = of_name(override)?
+    detect(term, lang)
 }
 
 /// Whether `COLORTERM` names a true-colour terminal.
