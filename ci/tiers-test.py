@@ -135,6 +135,16 @@ say(len(PR) < len(ALL), "T4 the pull-request tier is less than the full one")
 say("macos-latest" in job_body("macos"), "T4 macos runs on a macOS runner")
 say("failure() && github.event_name == 'schedule'" in job_body("nightly-red") and "needs: tier" in job_body("nightly-red"), "T4 nightly-red runs on a failed schedule after the verdict")
 
+# lair's consumer jobs (not imposed on games running their own planner).
+if ROOT == LAIR:
+    cub = job_body("cub")
+    conf = open(os.path.join(LAIR, "ci", "games.conf"), encoding="utf-8").read()
+    say("cub" in PR and re.search(r"^cub wolffe-lang/cub trunk$", conf, re.M) is not None,
+        "lr05 cub is a trunk consumer in the PR tier")
+    say("ci/stage-game cub game" in cub and "LAIR_UNPINNED: '1'" in cub and
+        "tools/check-linux" in cub and "in-container" in cub,
+        "lr05 cub stages this engine and runs its whole Linux suite")
+
 # T6
 say(verdict(needs_for("full", ALL)) == 0, "T6 a green full run")
 say(verdict(needs_for("pr", PR)) == 0, "T6 a green pr run")
