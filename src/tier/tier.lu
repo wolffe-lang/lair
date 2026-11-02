@@ -62,6 +62,15 @@ pub fn detect(term: str, lang: str) -> int {
     PLAIN
 }
 
+/// Explicit host assertion (for example LAIR_TIER), without reading the
+/// environment. An empty word keeps conservative detection; other words
+/// must be rich or plain. A caller's command-line tier takes precedence.
+pub fn detect_override(term: str, lang: str, override: str) -> int ! {parse} {
+    if override == "" { return detect(term, lang) }
+    let _checked = of_name(override)?
+    detect(term, lang)
+}
+
 /// Whether `COLORTERM` names a true-colour terminal.
 pub fn truecolor_of(colorterm: str) -> bool {
     colorterm == "truecolor" || colorterm == "24bit"
