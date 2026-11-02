@@ -93,6 +93,10 @@ The OSS stub exposes `oss_requests()` in the order used by PAX's player:
 `oss_answers` accepts only those exact answers. Unlike the original player, lair cannot silently adopt
 another sample rate or channel count: its PCM is a replay contract. The real device adapter belongs in
 a PAX integration or a future wolf-std ioctl API, not an assembly shim inside lair.
+The pinned std revision `78b9d3cbc41d51db44d18c40b6694403644d1c83`
+has no general ioctl wrapper. Until a device adapter can verify all three
+negotiated answers, `oss` keeps its named refusal and never opens `/dev/dsp`.
+Merely writing prepared PCM to that path would not implement this contract.
 
 ## The part format
 
