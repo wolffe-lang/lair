@@ -1,0 +1,51 @@
+lr05 implementation directive — 2026-11-02
+
+Base df11d213785f7694bdf3f3572299abc550d8b903. Read lane rules,
+contract, RULES 1–10, lair campaign, lr04 note, ten open issues and the
+four fresh trunk pins (all df11d213). Planning checkout remains read-only.
+
+Prediction, committed before changes:
+- #10/#24: a fake executable with passing render numbers but an early
+  latency failure makes tools/perf return nonzero, while preserving its
+  diagnostic in summary.txt. Current tee pipeline will fail this row.
+  Fix in POSIX sh without a new shell or dependency.
+- #5: stand-in engine gate tools prove both check scripts run the planner
+  and memory decision tests on the engine leg only; injecting a failing
+  planner must stop before compiler/build work. Current gates omit it.
+- #4: planner/wiring rows require cub in games.conf and a PR-tier job that
+  stages the engine under test. Current workflow lacks that job.
+- #3: planner/wiring rows require pack-macos in full only, stage the engine
+  under test, run the complete engine/game check and feed the verdict.
+  Current workflow lacks that job.
+- #9: current keyprobe already has a 50 ms split-CSI timeout and consumes
+  one byte on a lone Esc; add a real pty regression (Esc, 150 ms, q),
+  expecting restored termios, distinct byte reports, and exit 0.
+- #14: add per-slot fixed-point gain and sample-count ramps, preserving
+  existing PCM exactly at default gain. Duck/rise must keep the slot and
+  advance its position, reject invalid requests without mutation, reach
+  the exact target across tick boundaries and permit silence/recovery.
+- #16: preserve pure conservative detect and add a pure explicit override
+  API (rich/plain/empty; invalid names refuse), documenting LAIR_TIER as
+  caller input with command-line flags taking precedence. Existing game
+  source and committed pins will not change in this lane; adoption owed.
+- #11: evaluate output/process surface; do not claim that prepared WAV
+  playback is a live PCM stream. Leave a specific bounded-streaming
+  design recommendation if a portable owned nonblocking sink is absent.
+- #15: keep named OSS refusal; pinned std lacks the ioctl negotiation
+  surface. Do not add assembly, dependencies or unnegotiated device I/O.
+
+R-lr05-1: POSIX temp-output/status capture rather than bash pipefail;
+implement with a per-invocation private directory and cleanup trap.
+R-lr05-2: per-slot gain uses 0..1000 (unity 1000), fade in sample frames,
+return false for inactive/out-of-range slots; default reproduces PCM.
+R-lr05-3: explicit tier override is additive/pure; no TERM=linux upgrade
+without a host assertion, no game source changes; document adoption.
+R-lr05-4: keep #11/#15 open rather than fake a device/stream bridge;
+document required primitive and bounded ownership contract.
+
+Red witnesses are committed before their fixes. One deliberate regression
+on lr05-plant-perf is off the implementation line and opened as draft PR;
+CI must name its failing perf status row. Final gauntlet runs engine and
+all four immutable game trunks in separate copies against final engine
+head, stops on first nonzero, prints each END and does not edit goldens.
+README refreshed separately. Five-section note lives in the PR body.
