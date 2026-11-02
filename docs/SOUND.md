@@ -68,7 +68,19 @@ Commands are argument vectors, never shell text.
 The two stages are intentionally explicit: **the WAV adapter does not stream `tick`'s mixed PCM into
 an already-running player.** Deterministic replacement/layering is available as PCM (and can be exported
 as a replay WAV). A game's live audible transitions still need a streaming sink or prepared transition
-WAVs. Starting an unrelated WAV does not demonstrate that bridge. No game is wired to sound by this change.
+WAVs. Starting an unrelated WAV does not demonstrate that bridge. Games can
+schedule prepared WAV children themselves; that is not streaming mixed PCM.
+
+The pinned std already provides `process.pipe`, `fs.set_nonblock` and
+`fs.write_some`; the missing bridge is not a missing pipe primitive. A future
+sink must choose a player accepting this exact PCM contract on each supported
+host, bound its queued PCM, handle partial writes/backpressure without blocking
+the frame loop, and close/reap only its own child on every failure and teardown.
+The existing `process.poll()` reaps changes for any owned child, not one named
+output, so an output-local poll must not silently consume other game children.
+A portable backend choice (especially macOS) and ownership/polling contract
+remain open. Until then `start`/`finish` retain their prepared-file semantics;
+there is no pretend streaming or nonblocking teardown guarantee.
 
 The OSS stub exposes `oss_requests()` in the order used by PAX's player:
 
