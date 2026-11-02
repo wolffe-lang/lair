@@ -57,6 +57,21 @@ is answered, the package form is a mechanical move: `deps: { lair: { path: "../.
 - **The bytes a frame are the fewest the pen allows**, in the dialect the tier names; the terminal model
   reads them back to the grid (the diff property, in every shipped binary's `--selftest`).
 
+## Host tier assertions
+
+`tier.detect(term, locale)` remains conservative and pure: `TERM=linux` does
+not imply a Unicode-capable console. Hosts that know their console's glyph
+coverage can supply `rich` or `plain` to
+`tier.detect_override(term, locale, override)`. Empty means the existing
+detection; another word returns `parse`, never a silent fallback.
+
+Games can read `LAIR_TIER` and pass its value as `override` when no explicit
+`--tier` flag was supplied. The precedence is command-line flag, host assertion,
+then detection. The engine does not read or mutate the environment, and a pin
+bump alone does not make existing games consume `LAIR_TIER`. Until a game
+adopts this helper, PAX launches it with `--tier rich`. An override does not
+bypass `term.open`'s non-tty, dumb-terminal or minimum-size checks.
+
 ## Input and held keys
 
 `docs/KEYS.md` is the engine's input contract for games. Existing `Term`,
