@@ -101,6 +101,34 @@ def terminal(binary, mode):
     print("sound-restore %s q and ctrl-c ok" % mode, flush=True)
 
 
+def trunc_div(n, d):
+    return (1 if n >= 0 else -1) * (abs(n) // d)
+
+
+def gained_replay(binary, tier):
+    # Independent integer oracle over the already reviewed PCM golden.
+    source = (ROOT / "tests/goldens/sound/den.pcm").read_bytes()
+    want = bytearray()
+    for frame in range(12800):
+        gain = 1000
+        if 1600 <= frame < 4800:
+            gain = 1000 + trunc_div(-750 * (frame - 1599), 3200)
+        elif 4800 <= frame < 6400:
+            gain = 250 + trunc_div(750 * (frame - 4799), 1600)
+        elif 6400 <= frame < 8000 or 9600 <= frame < 11200:
+            gain = 0
+        for sample in struct.unpack_from("<hh", source, frame * 4):
+            envelope = trunc_div(sample * min(frame + 1, 1600), 1600)
+            scaled = trunc_div(trunc_div(envelope, 4) * gain, 1000)
+            want.extend(struct.pack("<h", scaled))
+    for attempt in (1, 2):
+        output = OUT / ("gain-%s-%d.pcm" % (tier, attempt))
+        run(binary, "--sound-gain-replay", "tests/parts/den.part", output)
+        assert output.read_bytes() == want, "sample-exact gain oracle " + tier
+    assert any(want[:6400]) and not any(want[25600:32000])
+    print("sound-gain %s: 12800 stereo frames, duck/rise/silence/one-sample ramps, two replays ok" % tier, flush=True)
+
+
 def main():
     for tier in ("native", "release"):
         binary = ROOT / "target" / tier / "lair"
@@ -112,6 +140,7 @@ def main():
             output = OUT / ("replay-%s-%d.pcm" % (tier, attempt))
             run(binary, "--sound-replay", "tests/parts/den.part", "tests/parts/chase.part", output)
             identical(output, ROOT / "tests/goldens/sound/replay.pcm", "replay/%s/%d" % (tier, attempt))
+        gained_replay(binary, tier)
         wave = OUT / (tier + ".wav")
         run(binary, "--wav", "tests/parts/den.part", "4", wave)
         b = wave.read_bytes()
