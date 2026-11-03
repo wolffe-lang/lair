@@ -1,3 +1,5 @@
+# Local PR evidence is cheap unless ci/full-matrix opts in.
+# Existing nightly commands and publication jobs are preserved.
 # lair — CI. The tiers are ci/tiers.py's (clef's planner, the house rule);
 # a job marked `# tier: pr` runs for a pull request, the rest for trunk,
 # the nightly, a dispatch and the `full-matrix` label:
@@ -14,6 +16,23 @@ on:
     types: [opened, synchronize, reopened, labeled]
   push:
     branches: [trunk]
+    paths:
+      - '.github/**'
+      - 'ci/**'
+      - '!ci/*.md'
+      - '!ci/**/*.md'
+      - 'tools/**'
+      - 'spec/**'
+      - '**/wolf-toolchain.toml'
+      - '**/rust-toolchain.toml'
+      - '**/*.pin'
+      - '**/PAIRING'
+      - '**/STD-PIN'
+      - 'vendor/tools.toml'
+      - 'gnu-oracle.toml'
+      - '.gitmodules'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   schedule:
     - cron: '23 5 * * *'
   workflow_dispatch:
@@ -35,21 +54,29 @@ jobs:
       jobs: ${{ steps.plan.outputs.jobs }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix') }}
         with:
           fetch-depth: 2
       - id: plan
+        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix') }}
         env:
-          EVENT: ${{ github.event_name }}
+          EVENT: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'release-matrix') && 'push' || github.event_name }}
           ACTION: ${{ github.event.action }}
           LABEL: ${{ github.event.label.name }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           IN_JOBS: ${{ inputs.jobs }}
         run: python3 ci/tiers.py plan --merge --github-output "$GITHUB_OUTPUT"
+      - name: local gate wiring proof
+        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix') }}
+        run: python3 -I ci/local-gate-test.py
+      - name: local evidence gate
+        if: ${{ !(github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) }}
+        run: echo 'Local gauntlet evidence is the gate; request ci or full-matrix for CI.'
   plan-test:
     # tier: pr
     needs: plan
-    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'plan-test')
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'plan-test')) }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +88,7 @@ jobs:
     # tier: pr
     name: linux x86-64 (fmt, tests, builds, sound goldens and latency, selftest)
     needs: plan
-    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'linux')
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'linux')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -87,7 +114,7 @@ jobs:
     # tier: pr
     name: pack on this engine (goldens, pty rows in the container)
     needs: plan
-    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack')
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
@@ -120,7 +147,7 @@ jobs:
     # tier: pr
     name: cub on this engine (complete Linux suite)
     needs: plan
-    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'cub')
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'cub')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     env:
@@ -150,7 +177,7 @@ jobs:
   macos:
     name: macOS arm64 (the engine's build, tests, selftest)
     needs: plan
-    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'macos')
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'macos')) }}
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -170,7 +197,7 @@ jobs:
   pack-macos:
     name: pack on this engine (macOS goldens and pty rows)
     needs: plan
-    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack-macos')
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack-macos')) }}
     runs-on: macos-latest
     timeout-minutes: 40
     env:
@@ -198,7 +225,7 @@ jobs:
             game/target/test.log
   tier:
     name: tier ${{ needs.plan.outputs.tier || 'unplanned' }}
-    if: ${{ !cancelled() }}
+    if: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) && (!cancelled()) }}
     needs:
       - plan
       - plan-test
