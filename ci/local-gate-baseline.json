@@ -1,0 +1,81 @@
+{
+  "main": "ci.yml",
+  "main_name": "ci",
+  "root": "plan",
+  "new_router": false,
+  "router_body": "    name: plan\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - name: full job set selected\n        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix') }}\n        run: echo 'SELECTED plan-test linux pack cub macos pack-macos tier'\n      - uses: actions/checkout@v4\n        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix') }}\n      - name: local gate wiring proof\n        if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix') }}\n        run: python3 -I ci/local-gate-test.py\n      - name: local evidence gate\n        if: ${{ !(github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'full-matrix') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'release-matrix')) }}\n        run: echo 'Local gauntlet evidence is the gate; request ci or full-matrix for CI.'\n",
+  "planner": [
+    "python3",
+    "ci/tiers.py",
+    "plan"
+  ],
+  "full": {
+    "tier": "full",
+    "jobs": [
+      "plan-test",
+      "linux",
+      "pack",
+      "cub",
+      "macos",
+      "pack-macos"
+    ]
+  },
+  "selected": [
+    "plan-test",
+    "linux",
+    "pack",
+    "cub",
+    "macos",
+    "pack-macos",
+    "tier"
+  ],
+  "module_path": "src/local-module.lu",
+  "cross_paths": [
+    ".github/workflows/ci.yml",
+    "ci/local-gate-test.py",
+    "tools/shared.sh",
+    "wolf-toolchain.toml"
+  ],
+  "push_patterns": [
+    ".github/**",
+    "ci/**",
+    "!ci/*.md",
+    "!ci/**/*.md",
+    "tools/**",
+    "spec/**",
+    "**/wolf-toolchain.toml",
+    "**/rust-toolchain.toml",
+    "**/*.pin",
+    "**/PAIRING",
+    "**/STD-PIN",
+    "vendor/tools.toml",
+    "gnu-oracle.toml",
+    ".gitmodules",
+    "Cargo.toml",
+    "Cargo.lock"
+  ],
+  "push_before": "  push:\n    branches: [trunk]\n",
+  "preserve_push": false,
+  "workflows": {
+    "ci.yml": {
+      "plan": "    runs-on: ubuntu-24.04\n    outputs:\n      tier: ${{ steps.plan.outputs.tier }}\n      jobs: ${{ steps.plan.outputs.jobs }}\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 2\n      - id: plan\n        env:\n          EVENT: ${{ github.event_name }}\n          ACTION: ${{ github.event.action }}\n          LABEL: ${{ github.event.label.name }}\n          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}\n          HEAD_SHA: ${{ github.event.pull_request.head.sha }}\n          IN_JOBS: ${{ inputs.jobs }}\n        run: python3 ci/tiers.py plan --merge --github-output \"$GITHUB_OUTPUT\"\n",
+      "plan-test": "    # tier: pr\n    needs: plan\n    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'plan-test')\n    runs-on: ubuntu-24.04\n    steps:\n      - uses: actions/checkout@v4\n      - run: python3 -I ci/tiers-test.py\n      - run: python3 -I ci/memgate-test.py\n      - run: python3 -I ci/perf-test.py\n      - run: python3 -I ci/check-test.py\n",
+      "linux": "    # tier: pr\n    name: linux x86-64 (fmt, tests, builds, sound goldens and latency, selftest)\n    needs: plan\n    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'linux')\n    runs-on: ubuntu-24.04\n    timeout-minutes: 30\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/cache@v4\n        with:\n          path: .wolf-bin\n          key: lair-toolchain-linux-${{ hashFiles('wolf-toolchain.toml') }}\n      - name: the pinned toolchain, by digest\n        run: tools/fetch-toolchain\n      - name: the Linux leg, in the container\n        env:\n          LAIR_ENGINE: docker\n        run: tools/in-container tools/check-linux\n      - uses: actions/upload-artifact@v4\n        if: ${{ !cancelled() }}\n        with:\n          name: linux-evidence\n          path: |\n            target/test.log\n            target/sound\n",
+      "pack": "    # tier: pr\n    name: pack on this engine (goldens, pty rows in the container)\n    needs: plan\n    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack')\n    runs-on: ubuntu-24.04\n    timeout-minutes: 40\n    env:\n      # The engine under test is never the one pack pins: every engine tool\n      # in this job says so loudly instead of refusing (tools/lib-root.sh).\n      LAIR_UNPINNED: '1'\n    steps:\n      - uses: actions/checkout@v4\n      - name: pack, at the first ref of ci/games.conf that exists\n        run: ci/stage-game pack game\n      - uses: actions/cache@v4\n        with:\n          path: game/.wolf-bin\n          key: lair-toolchain-linux-${{ hashFiles('wolf-toolchain.toml') }}\n      - name: the pinned toolchain, by digest\n        run: game/.lair/tools/fetch-toolchain\n      - name: pack's Linux leg on the engine under test\n        env:\n          LAIR_ENGINE: docker\n        run: game/.lair/tools/in-container .lair/tools/check-linux\n      - uses: actions/upload-artifact@v4\n        if: ${{ !cancelled() }}\n        with:\n          name: pack-evidence\n          path: |\n            game/target/goldens\n            game/target/pty\n            game/target/test.log\n",
+      "cub": "    # tier: pr\n    name: cub on this engine (complete Linux suite)\n    needs: plan\n    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'cub')\n    runs-on: ubuntu-24.04\n    timeout-minutes: 180\n    env:\n      LAIR_UNPINNED: '1'\n    steps:\n      - uses: actions/checkout@v4\n      - name: cub trunk on the engine under test\n        run: ci/stage-game cub game\n      - uses: actions/cache@v4\n        with:\n          path: game/.wolf-bin\n          key: lair-toolchain-linux-${{ hashFiles('wolf-toolchain.toml') }}\n      - name: the pinned toolchain, by digest\n        run: game/.lair/tools/fetch-toolchain\n      - name: cub's complete Linux suite, including both gameplay backends\n        env:\n          LAIR_ENGINE: docker\n        run: game/.lair/tools/in-container tools/check-linux\n      - uses: actions/upload-artifact@v4\n        if: ${{ !cancelled() }}\n        with:\n          name: cub-evidence\n          path: |\n            game/target/goldens\n            game/target/pty\n            game/target/test.log\n",
+      "macos": "    name: macOS arm64 (the engine's build, tests, selftest)\n    needs: plan\n    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'macos')\n    runs-on: macos-latest\n    timeout-minutes: 30\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/cache@v4\n        with:\n          path: .wolf-bin\n          key: lair-toolchain-macos-${{ hashFiles('wolf-toolchain.toml') }}\n      - name: the pinned toolchain, by digest\n        run: tools/fetch-toolchain\n      # RULES section 4's memory gate is nomad's (the maintainer's Mac); the\n      # runner's free-memory figure means nothing for it (tools/lib-mem.sh).\n      - name: fmt, the tests, both builds, the selftest\n        env:\n          LAIR_MEMORY_GATE: '0'\n        run: tools/check\n",
+      "pack-macos": "    name: pack on this engine (macOS goldens and pty rows)\n    needs: plan\n    if: contains(fromJSON(needs.plan.outputs.jobs || '[]'), 'pack-macos')\n    runs-on: macos-latest\n    timeout-minutes: 40\n    env:\n      LAIR_UNPINNED: '1'\n      LAIR_MEMORY_GATE: '0'\n    steps:\n      - uses: actions/checkout@v4\n      - name: pack trunk on the engine under test\n        run: ci/stage-game pack game\n      - uses: actions/cache@v4\n        with:\n          path: game/.wolf-bin\n          key: lair-toolchain-macos-${{ hashFiles('wolf-toolchain.toml') }}\n      - name: the pinned toolchain, by digest\n        run: game/.lair/tools/fetch-toolchain\n      - name: fmt, tests, both builds, selftest, goldens and every pty row\n        run: game/.lair/tools/check\n      - uses: actions/upload-artifact@v4\n        if: ${{ !cancelled() }}\n        with:\n          name: pack-macos-evidence\n          path: |\n            game/target/goldens\n            game/target/pty\n            game/target/test.log\n",
+      "tier": "    name: tier ${{ needs.plan.outputs.tier || 'unplanned' }}\n    if: ${{ !cancelled() }}\n    needs:\n      - plan\n      - plan-test\n      - linux\n      - pack\n      - cub\n      - macos\n      - pack-macos\n    runs-on: ubuntu-24.04\n    steps:\n      - uses: actions/checkout@v4\n      - env:\n          NEEDS: ${{ toJSON(needs) }}\n        run: python3 ci/tiers.py verdict\n",
+      "nightly-red": "    name: nightly red, an issue\n    needs: tier\n    if: ${{ failure() && github.event_name == 'schedule' }}\n    runs-on: ubuntu-24.04\n    permissions:\n      contents: read\n      issues: write\n    steps:\n      - uses: actions/checkout@v4\n      - env:\n          GH_TOKEN: ${{ github.token }}\n          REPO: ${{ github.repository }}\n          WORKFLOW: ${{ github.workflow }}\n          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n        run: ci/nightly-red.sh\n"
+    }
+  },
+  "schedules": {
+    "ci.yml": "    - cron: '23 5 * * *'"
+  },
+  "unchanged": {},
+  "exempt_jobs": [
+    "nightly-red",
+    "notify",
+    "sleep-alarm"
+  ]
+}
