@@ -13,8 +13,8 @@ installer row for PAX and the collection's documents will live here too.
 
 | machine | what runs | state |
 |---|---|---|
-| macOS, Terminal.app or iTerm2 (arm64) | the engine's tests and selftest; the games' rich tier | the maintainer's play; CI's macOS leg on every push to trunk |
-| Linux, any UTF-8 terminal emulator (x86-64) | the same, in a container | CI's Linux leg on every pull request, plus pack and cub on the engine under test |
+| macOS, Terminal.app or iTerm2 (arm64) | the engine's tests and selftest; the games' rich tier | playtested; macOS CI in opted-in full runs and nightly |
+| Linux, any UTF-8 terminal emulator (x86-64) | the same, in a container | Linux CI in opted-in full runs and nightly, plus pack and cub on the engine under test |
 | a Linux virtual terminal (`TERM=linux`) | the games' plain tier (code points 0-255, sixteen colours) | conservative detection from `TERM` |
 | PAX's console | rich where the console covers the games' glyphs | launch existing games with `--tier rich`; the pure host-override API is available for game adoption |
 
@@ -85,12 +85,14 @@ trap), `agree-rich` and `agree-plain` (a replayed case's captured bytes, through
 its headless final frame). The memory gate (`tools/memgate.py`, `tools/lib-mem.sh`) is the maintainer's
 Mac's rule and nobody else's.
 
-CI (`.github/workflows/ci.yml`, `ci/tiers.py`): a pull request runs the planner,
-memory, check-entrypoint and perf-status proofs, the engine's Linux leg, pack's
-engine/golden/pty leg and cub's complete Linux suite on this engine. Consumers
+CI (`.github/workflows/ci.yml`, `ci/tiers.py`): unlabelled PRs run one cheap
+job. The `ci` or `full-matrix` label runs the full set: planner, memory,
+check-entrypoint and perf-status proofs, the engine's Linux leg, pack's
+engine/golden/pty leg, cub's complete Linux suite, and the engine and pack on
+macOS, including pack's tests, both builds, goldens and pty rows. Consumers
 are cloned from `ci/games.conf` and this checkout is staged as their `.lair`.
-Trunk, the nightly and the `full-matrix` label add the engine and pack on macOS,
-including pack's tests, both builds, goldens and pty rows. The engine's own
+Trunk pushes run the full set only on cross-cutting paths; the nightly still
+runs it. The engine's own
 `tools/check` and `tools/check-linux` also run the planner proofs; they are not
 imposed on a game's workflow. The games' workflows use the same planner from
 their staged engine. `tools/perf` preserves a failing idle/latency runner's exit
