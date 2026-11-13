@@ -68,7 +68,7 @@ siblings at wolf 0.2.35, nor at 0.2.36 (`docs/ENGINE.md` has the reproducer's pl
 
 ## Build and test
 
-The toolchain is pinned by digest in `wolf-toolchain.toml` (wolf 0.2.36, lupin 0.1.58, the std tree the
+The toolchain is pinned by digest in `wolf-toolchain.toml` (wolf 0.2.40, lupin 0.1.62, the std tree the
 compiler bundles) for the engine and for every game that pins it.
 
 ```
