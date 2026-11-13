@@ -35,25 +35,28 @@
 # the games declare none. The release tier's mid-end fault (wolf-lang#940)
 # is fixed after this tag, so `tools/build` keeps `WOLF_MIDEND=0` here.
 
+# The 0.2.40 release pairs with lupin 0.1.62 and bundles the std tree below.
+# Archive digests were read twice from the corresponding release metadata.
+
 [wolf]
-version = "0.2.36"
+version = "0.2.40"
 repo = "wolffe-lang/wolf-lang"
-rev = "5adf3d91f75b3545ff8d38e5b6693b0b9f367a05"
-version_line = "wolf 0.2.36 (wolfgang, pin 5adf3d9)"
-aarch64-apple-darwin = "b79d55845f349d56789d9d1cb057ee88b5a7128d3b6dd77ca070707cfa4aa632"
-x86_64-unknown-linux-gnu = "d383c74c8cd123b9d9dfaa268271d4f004294f85c2b230237d0ef07027d9500d"
-aarch64-unknown-linux-gnu = "3d5bd9ef47d3d198dd67fb3f995dff3ef7b169097529fa0e7ae8524e723be3d4"
+rev = "b333b9da8560e4e1dfd6e30099d14d98e752f9e1"
+version_line = "wolf 0.2.40 (wolfgang, pin b333b9d)"
+aarch64-apple-darwin = "3f18a56562fb089da05a50a612e031cd297f20a617b9e6e7ada768fbeb69e72b"
+x86_64-unknown-linux-gnu = "bc2020e0b7400c18162a6072c299c65c0582ea74a0eba22aaa57ca04ae13e7e1"
+aarch64-unknown-linux-gnu = "cea26eea215e7cdba60db2870c0eb4d2c5738065046ec5fe6e0eec7da55e48cd"
 
 [lupin]
-version = "0.1.58"
+version = "0.1.62"
 repo = "wolffe-lang/wolf-interp"
-rev = "6240efe5570dba1a33ba6269e3ba44bae33dd972"
-version_line = "lupin 0.1.58 (wolf-interp, reference interpreter at pin a5378e3)"
-aarch64-apple-darwin = "c1b0277133c052892be10539062666e873e874997cbb5be300cffe2c309ec055"
-x86_64-unknown-linux-gnu = "34f52792bb59bc7565e0edc1235cd47d9a6ad13d5e6528993627f2e699b62193"
-aarch64-unknown-linux-gnu = "00e40fa22d99046b28357f56092075cdb3e3e36a21cc44bf04d6b46605db432c"
+rev = "72eff3c99b3a9e434b059f5dd3e4b1d29c862ddc"
+version_line = "lupin 0.1.62 (wolf-interp, reference interpreter at pin 5f1f1c9)"
+aarch64-apple-darwin = "228790ef3aef7605a2f9524abdcb6de5c8a5fa179437d82f3d3af262495a4e7f"
+x86_64-unknown-linux-gnu = "3b3bf9c23a9e545a4a99e65a5183d0c5e71e91d6bfb8a189147e2701c03e177f"
+aarch64-unknown-linux-gnu = "f5391308ad9cd8ae1e31a42e7a17c1453679e2a0ac03f83783c4ac52e650ef2e"
 
 [std]
-# The exact tree the 0.2.36 archive bundles (its STD-REV).
+# The exact tree the 0.2.40 archive bundles (its STD-REV).
 repo = "wolffe-lang/wolf-std"
-rev = "78b9d3cbc41d51db44d18c40b6694403644d1c83"
+rev = "be1d10fa2798cc6bc2a1fd0b2e559e283469c9bf"
