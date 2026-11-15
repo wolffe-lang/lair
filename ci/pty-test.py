@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Capture-all diagnostics: real pty children, no compiler or game required."""
+import ast
 import importlib.machinery
 import importlib.util
 import json
@@ -89,7 +90,9 @@ class CaptureDiagnostics(unittest.TestCase):
                 self.assertEqual(records[0].with_suffix(".err").read_bytes(), b"FIRSTERR")
                 self.assertEqual(records[1].with_suffix(".bin").read_bytes(), b"READYSECOND:z")
                 self.assertEqual(records[1].with_suffix(".err").read_bytes(), b"SECONDERR:z")
-                self.assertEqual(last["termios_before"], last["termios_after"])
+                normalize = runner_module().termios_words
+                self.assertEqual(normalize(ast.literal_eval(last["termios_before"])),
+                                 normalize(ast.literal_eval(last["termios_after"])))
                 events = last["events"]
                 self.assertEqual([e["at_ns"] for e in events], sorted(e["at_ns"] for e in events))
                 typed = [e for e in events if e["event"] == "type-before"]

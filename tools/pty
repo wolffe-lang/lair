@@ -40,8 +40,17 @@ The game's tests/lair.conf (shell `KEY=VALUE` lines) sets RUN_ARGS (pack's
 
 Exit 0 when every row passes; each row prints one line. Captures are kept
 under target/pty/ with --keep (and always for a failed row).
+--capture-all (or LAIR_PTY_CAPTURE_ALL=1) additionally keeps EVERY nested
+session, including those a game row does not return, under
+ target/pty/sessions/run-*/row-*/session-* .bin/.err/.json. JSON records
+monotonic input/output observations, byte offsets, argv, dimensions and
+exit/restore reports. environment.json measures OS, Python, CPU and memory
+and records only explicitly named runner-image variables, never the full
+environment or hostname. Requested waits and row assertions are unchanged;
+collection has observation overhead and is not a performance measurement.
 """
-import argparse, fcntl, os, pty, re, select, struct, subprocess, sys, termios, time
+import argparse, fcntl, json, os, platform, pty, re, select, struct, subprocess, sys, termios, time
+from pathlib import Path
 
 LAIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.dirname(LAIR) if os.path.exists(os.path.join(os.path.dirname(LAIR), "lair.pin")) else LAIR
@@ -86,6 +95,91 @@ def stty_words(text):
     return [w for w in text.split() if w not in ("pendin", "-pendin") and not w.rstrip(";").isdigit()]
 
 
+def capture_environment():
+    """Measure a small, explicit host allowlist; never dump env or hostname."""
+    info = {"schema": 1, "system": platform.system(), "release": platform.release(),
+            "machine": platform.machine(), "python": sys.version,
+            "measurements": {"logical_cpus": os.cpu_count()},
+            "runner_image": {key: os.environ[key] for key in
+                             ("ImageOS", "ImageVersion", "RUNNER_OS", "RUNNER_ARCH")
+                             if key in os.environ}}
+    if sys.platform == "darwin":
+        commands = {
+            "logical_cpus": ["/usr/sbin/sysctl", "-n", "hw.ncpu"],
+            "physical_cpus": ["/usr/sbin/sysctl", "-n", "hw.physicalcpu"],
+            "memory_bytes": ["/usr/sbin/sysctl", "-n", "hw.memsize"],
+            "os_version": ["/usr/bin/sw_vers", "-productVersion"],
+            "os_build": ["/usr/bin/sw_vers", "-buildVersion"],
+        }
+        for name, argv in commands.items():
+            try:
+                result = subprocess.run(argv, capture_output=True, text=True, timeout=5)
+                value = result.stdout.strip() if result.returncode == 0 else {"error": "exit %d" % result.returncode}
+            except (OSError, subprocess.TimeoutExpired) as error:
+                value = {"error": type(error).__name__}
+            info["measurements"][name] = value
+    else:
+        try:
+            info["measurements"]["memory_bytes"] = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+        except (OSError, ValueError):
+            info["measurements"]["memory_bytes"] = {"error": "unavailable"}
+    return info
+
+
+class SessionCapture:
+    """Observation only: timestamps and byte offsets, no pacing or verdict."""
+    def __init__(self, argv, rows, cols, settle):
+        self.started = time.monotonic_ns()
+        self.metadata = {"argv": list(argv), "rows": rows, "cols": cols,
+                         "constructor_settle": settle, "started_monotonic_ns": self.started,
+                         "events": []}
+
+    def event(self, name, **fields):
+        self.metadata["events"].append(dict(event=name, at_ns=time.monotonic_ns() - self.started, **fields))
+
+
+class CaptureRun:
+    """Keep ALL child sessions of a row, including those it does not return."""
+    def __init__(self, root):
+        self.path = Path(root) / "target/pty/sessions" / ("run-%d-%d" % (time.monotonic_ns(), os.getpid()))
+        self.path.mkdir(parents=True)
+        (self.path / "environment.json").write_text(json.dumps(capture_environment(), indent=2) + "\n", encoding="utf-8")
+        self.row_index = 0
+        self.sessions = []
+
+    def begin_row(self, name):
+        self.row_index += 1
+        self.row_name = name
+        self.row_path = self.path / ("row-%03d-%s" % (self.row_index, re.sub(r"[^a-zA-Z0-9_-]", "_", name)[:80]))
+        self.row_path.mkdir()
+        self.sessions = []
+
+    def session(self, session, argv, rows, cols, settle):
+        capture = SessionCapture(argv, rows, cols, settle)
+        self.sessions.append((session, capture))
+        return capture
+
+    def save_row(self):
+        for ordinal, (session, capture) in enumerate(self.sessions, 1):
+            path = self.row_path / ("session-%04d" % ordinal)
+            out, err = getattr(session, "out", b""), getattr(session, "err", b"")
+            path.with_suffix(".bin").write_bytes(out)
+            path.with_suffix(".err").write_bytes(err)
+            metadata = dict(capture.metadata, schema=1, row=self.row_name, ordinal=ordinal,
+                            holder_pid=getattr(session, "pid", None), game_pid=getattr(session, "job", None),
+                            stdout_bytes=len(out), stderr_bytes=len(err),
+                            exit_status=getattr(session, "status", None),
+                            termios_before=repr(session.before) if hasattr(session, "before") else None,
+                            termios_after=repr(session.after) if hasattr(session, "after") else None,
+                            stty_before=getattr(session, "stty_before", None),
+                            stty_after=getattr(session, "stty_after", None))
+            path.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+        self.sessions = []
+
+
+CAPTURE = None
+
+
 class Session:
     """A pseudo-terminal with the game running in it, the way a shell runs
     a job. A HOLDER process is the session leader and keeps the terminal
@@ -98,6 +192,7 @@ class Session:
     pipe. Nothing here traps, masks or sends a signal."""
 
     def __init__(self, argv, rows, cols, env, settle=0.3, replies=()):
+        self.capture = CAPTURE.session(self, argv, rows, cols, settle) if CAPTURE else None
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         r_rep, w_rep = os.pipe()
@@ -145,6 +240,8 @@ class Session:
         os.close(r_pid)
 
     def pump(self, seconds):
+        if self.capture:
+            self.capture.event("pump-before", seconds=seconds, stdout_offset=len(self.out), stderr_offset=len(self.err))
         end = time.monotonic() + seconds
         while time.monotonic() < end:
             fds = [] if self.eof else [self.master]
@@ -158,24 +255,41 @@ class Session:
                 if not chunk:
                     self.eof = True
                 else:
+                    if self.capture:
+                        self.capture.event("stdout", offset=len(self.out), size=len(chunk))
                     self.out += chunk
                     while self.replies and self.replies[0][0] in self.out:
                         query, answer = self.replies.pop(0)
                         observed = time.monotonic()
                         # One tiny write, no pumps or artificial inter-byte
                         # sleeps that could strand a partial answer at timeout.
+                        if self.capture:
+                            self.capture.event("reply-before", bytes_hex=answer.hex(), stdout_offset=len(self.out), stderr_offset=len(self.err))
                         written = os.write(self.master, answer)
+                        if self.capture:
+                            self.capture.event("reply-write", written=written)
                         if written != len(answer):
                             raise RuntimeError("short stand-in terminal reply")
                         self.reply_times.append((query, observed, time.monotonic()))
             if self.r_err in r:
                 chunk = os.read(self.r_err, 65536)
                 if chunk:
+                    if self.capture:
+                        self.capture.event("stderr", offset=len(self.err), size=len(chunk))
                     self.err += chunk
+        if self.capture:
+            self.capture.event("pump-after", stdout_offset=len(self.out), stderr_offset=len(self.err))
 
     def type(self, data, settle=0.08):
-        os.write(self.master, data)
+        if self.capture:
+            self.capture.event("type-before", bytes_hex=data.hex(), settle=settle,
+                               stdout_offset=len(self.out), stderr_offset=len(self.err))
+        written = os.write(self.master, data)
+        if self.capture:
+            self.capture.event("type-write", written=written)
         self.pump(settle)
+        if self.capture:
+            self.capture.event("type-after", stdout_offset=len(self.out), stderr_offset=len(self.err))
 
     def finish(self, timeout=30.0):
         end = time.monotonic() + timeout
@@ -196,6 +310,8 @@ class Session:
         os.close(self.r_rep); os.close(self.r_err); os.close(self.master)
         import ast
         self.before, self.after, self.stty_before, self.stty_after, self.status = ast.literal_eval(rep.decode())
+        if self.capture:
+            self.capture.event("finish", exit_status=self.status, stdout_offset=len(self.out), stderr_offset=len(self.err))
 
 
 PENDIN = 0x20000000
@@ -369,6 +485,7 @@ def main():
     ap.add_argument("--bin", default=os.path.join(ROOT, "target", "release", GAME))
     ap.add_argument("--rows", default="")
     ap.add_argument("--keep", action="store_true")
+    ap.add_argument("--capture-all", action="store_true", help="retain every child session and measured host metadata")
     a = ap.parse_args()
     if not mac_memory_ok():
         return 3
@@ -378,8 +495,14 @@ def main():
     if not os.access(bin, os.X_OK):
         print("pty: no binary at %s" % bin)
         return 2
+    global CAPTURE
+    CAPTURE = CaptureRun(ROOT) if a.capture_all or os.environ.get("LAIR_PTY_CAPTURE_ALL") == "1" else None
+    if CAPTURE:
+        print("pty: capture-all at %s" % CAPTURE.path)
     failed = 0
     for name in rows:
+        if CAPTURE:
+            CAPTURE.begin_row(name)
         try:
             if name in ("quit", "ctrl-c"):
                 s, problems = row_keys(bin, name, name)
@@ -397,6 +520,9 @@ def main():
             print("pty: %s FAILED: %s" % (name, e))
             failed += 1
             continue
+        finally:
+            if CAPTURE:
+                CAPTURE.save_row()
         if problems or a.keep:
             keep(name, s, a)
         if problems:
