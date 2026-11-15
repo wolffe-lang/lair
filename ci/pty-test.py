@@ -44,12 +44,22 @@ def earlier_failure(bin, ctx):
     last.finish()
     return last, ["earlier child exited %d" % first.status]
 
-ROWS = {"earlier-failure": earlier_failure}
+def green(bin, ctx):
+    session = ctx.Session([bin, "-I", "-c", "import os; os.write(1,b'GREEN')"],
+                          24, 80, ctx.env_for(), settle=0)
+    session.finish()
+    return session, []
+
+def exceptional(bin, ctx):
+    green(bin, ctx)
+    raise RuntimeError("fixture row exception")
+
+ROWS = {"earlier-failure": earlier_failure, "green": green, "exceptional": exceptional}
 '''
 
 
 class CaptureDiagnostics(unittest.TestCase):
-    def fixture_run(self, root, mode):
+    def fixture_run(self, root, mode, row="earlier-failure"):
         for name in ("tools", "tests", "src", "home"):
             (root / name).mkdir()
         for name in ("pty", "memgate.py"):
@@ -60,7 +70,7 @@ class CaptureDiagnostics(unittest.TestCase):
                    LAIR_MEMORY_GATE="0", GITHUB_TOKEN="credential-sentinel")
         env.pop("LAIR_PTY_CAPTURE_ALL", None)
         args = [sys.executable, "-I", str(root / "tools/pty"),
-                "--bin", sys.executable, "--rows", "earlier-failure"]
+                "--bin", sys.executable, "--rows", row]
         if mode == "option":
             args.append("--capture-all")
         elif mode == "environment":
@@ -123,6 +133,37 @@ class CaptureDiagnostics(unittest.TestCase):
             self.assertIn("earlier child exited 3", result.stdout)
             self.assertFalse((root / "target/pty/sessions").exists())
             self.assertEqual((root / "target/pty/earlier-failure.bin").read_bytes(), b"READYSECOND:z")
+
+    def test_capture_all_keeps_green_session_and_environment(self):
+        with tempfile.TemporaryDirectory(prefix="lair-pty-green-") as temp:
+            root = Path(temp)
+            result = self.fixture_run(root, "option", "green")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            runs = list((root / "target/pty/sessions").glob("run-*"))
+            self.assertEqual(len(runs), 1)
+            self.assertTrue((runs[0] / "environment.json").is_file())
+            captures = list(runs[0].glob("row-*/*.bin"))
+            self.assertEqual(len(captures), 1)
+            self.assertEqual(captures[0].read_bytes(), b"GREEN")
+
+    def test_row_exception_still_saves_finished_sessions(self):
+        with tempfile.TemporaryDirectory(prefix="lair-pty-exception-") as temp:
+            root = Path(temp)
+            result = self.fixture_run(root, "option", "exceptional")
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("fixture row exception", result.stdout)
+            captures = list((root / "target/pty/sessions").glob("run-*/row-*/*.bin"))
+            self.assertEqual(len(captures), 1)
+            self.assertEqual(captures[0].read_bytes(), b"GREEN")
+
+    def test_macos_capture_is_uploaded_on_green(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+        job = workflow.split("\n  pack-macos:\n", 1)[1].split("\n  tier:\n", 1)[0]
+        self.assertIn("LAIR_PTY_CAPTURE_ALL: '1'", job)
+        upload = job.split("uses: actions/upload-artifact@v4", 1)[1]
+        self.assertIn("if: ${{ !cancelled() }}", upload)
+        self.assertIn("name: pack-macos-evidence", upload)
+        self.assertIn("game/target/pty", upload)
 
     def test_environment_is_measured_and_allowlisted(self):
         runner = runner_module()

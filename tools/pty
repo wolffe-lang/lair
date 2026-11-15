@@ -132,6 +132,7 @@ class SessionCapture:
         self.started = time.monotonic_ns()
         self.metadata = {"argv": list(argv), "rows": rows, "cols": cols,
                          "constructor_settle": settle, "started_monotonic_ns": self.started,
+                         "input_observation": "Session.type and terminal replies; direct master writes are not intercepted",
                          "events": []}
 
     def event(self, name, **fields):
