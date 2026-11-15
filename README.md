@@ -85,6 +85,17 @@ trap), `agree-rich` and `agree-plain` (a replayed case's captured bytes, through
 its headless final frame). The memory gate (`tools/memgate.py`, `tools/lib-mem.sh`) is the maintainer's
 Mac's rule and nobody else's.
 
+`pty --capture-all` (or `LAIR_PTY_CAPTURE_ALL=1`) retains every nested session,
+not only the session a row returns, under `target/pty/sessions/run-*`.
+Each session has raw `.bin`/`.err` captures and JSON with monotonic input/output
+observations, byte offsets, arguments, dimensions and exit/restore reports.
+Input events cover `Session.type` and terminal replies, not direct master writes.
+`environment.json` measures OS, Python, CPU and memory and records an explicit
+runner-image allowlist, never the whole environment or hostname. Pack's macOS
+job enables this mode; `pack-macos-evidence` includes it even on green.
+No sleeps, retries or assertion changes are added. Collection has observation
+overhead; a green diagnostic run does not explain an earlier failure.
+
 CI (`.github/workflows/ci.yml`, `ci/tiers.py`): unlabelled PRs run one cheap
 job. The `ci` or `full-matrix` label runs the full set: planner, memory,
 check-entrypoint and perf-status proofs, the engine's Linux leg, pack's
