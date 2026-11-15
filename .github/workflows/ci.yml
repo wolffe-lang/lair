@@ -84,6 +84,7 @@ jobs:
       - run: python3 -I ci/memgate-test.py
       - run: python3 -I ci/perf-test.py
       - run: python3 -I ci/check-test.py
+      - run: python3 -I ci/pty-test.py
   linux:
     # tier: pr
     name: linux x86-64 (fmt, tests, builds, sound goldens and latency, selftest)
@@ -203,6 +204,10 @@ jobs:
     env:
       LAIR_UNPINNED: '1'
       LAIR_MEMORY_GATE: '0'
+      # Preserve every nested session, not only the row's returned one.
+      # The existing target/pty artifact includes captures and environment.json
+      # on successful runs too; this does not alter pacing or assertions.
+      LAIR_PTY_CAPTURE_ALL: '1'
     steps:
       - uses: actions/checkout@v4
       - name: pack trunk on the engine under test

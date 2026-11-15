@@ -14,6 +14,7 @@ if [ "$GAME_ROOT" = "$LAIR_ROOT" ]; then
     python3 -I "$LAIR_ROOT/ci/memgate-test.py"
     python3 -I "$LAIR_ROOT/ci/check-test.py"
     python3 -I "$LAIR_ROOT/ci/perf-test.py"
+    python3 -I "$LAIR_ROOT/ci/pty-test.py"
 fi
 "$LAIR_ROOT/tools/check-fmt"
 "$LAIR_ROOT/tools/test"
